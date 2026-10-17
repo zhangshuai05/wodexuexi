@@ -117,7 +117,7 @@ class Polisher:
         """非阻塞。ev 至少含 utt_id / raw_text / start_ms / end_ms。"""
         self._queue.put({
             "utt_id": ev["utt_id"],
-            "raw_text": ev.get("raw_text", ""),
+            "raw_text": ev.get("raw_text") or "",
             "start_ms": ev.get("start_ms"),
             "end_ms": ev.get("end_ms"),
         })
@@ -145,17 +145,31 @@ class Polisher:
                     self._results[item["utt_id"]] = result
                 self._context.append(result["polished_text"])
                 del self._context[:-CONTEXT_SENTENCES]
-                self._on_result({
-                    "t": "llm_confirmed",
-                    "utt_id": item["utt_id"],
-                    "start_ms": item["start_ms"],
-                    "end_ms": item["end_ms"],
-                    "raw_text": item["raw_text"],
-                    "polished_text": result["polished_text"],
-                    "corrected": result["corrected"],
-                    "bypassed": result["bypassed"],
-                    "error": result["error"],
-                })
+                try:
+                    self._on_result({
+                        "t": "llm_confirmed",
+                        "utt_id": item["utt_id"],
+                        "start_ms": item["start_ms"],
+                        "end_ms": item["end_ms"],
+                        "raw_text": item["raw_text"],
+                        "polished_text": result["polished_text"],
+                        "corrected": result["corrected"],
+                        "bypassed": result["bypassed"],
+                        "error": result["error"],
+                    })
+                except Exception as exc:  # noqa: BLE001 - 回调异常（如落盘失败）不得杀死消费者
+                    with self._lock:
+                        self._results[item["utt_id"]] = {
+                            **result,
+                            "error": ((result.get("error") or "") + f" | callback: {type(exc).__name__}: {exc}").strip(" |"),
+                        }
+            except Exception as exc:  # noqa: BLE001 - 单条任务异常不得杀死消费者
+                with self._lock:
+                    self._results[item["utt_id"]] = {
+                        "polished_text": item.get("raw_text") or "",
+                        "corrected": False, "bypassed": False,
+                        "error": f"{type(exc).__name__}: {exc}",
+                    }
             finally:
                 self._queue.task_done()
 

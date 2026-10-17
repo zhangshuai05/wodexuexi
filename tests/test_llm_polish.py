@@ -127,3 +127,33 @@ def test_submit_is_non_blocking_and_preserves_order():
     out = polisher.close(timeout=10)
     assert set(out) == {"utt_0000", "utt_0001", "utt_0002"}
     assert [ev["utt_id"] for ev in results] == ["utt_0000", "utt_0001", "utt_0002"]
+
+
+def test_callback_exception_does_not_kill_worker():
+    seen = []
+
+    def boom_once(ev):
+        seen.append(ev["utt_id"])
+        if len(seen) == 1:
+            raise RuntimeError("disk full")
+
+    polisher = Polisher(boom_once, call=lambda prompt: '{"polished":"改好了。"}')
+    # raw 必须是 3 个有效字："改好了。" 才能通过缩减守卫（4 >= 3 * 0.7）并被润色器接受
+    polisher.submit(_event(uid="utt_0001", raw="改好了"))
+    polisher.submit(_event(uid="utt_0002"))
+    out = polisher.close(timeout=5)
+
+    assert set(out) == {"utt_0001", "utt_0002"}
+    assert seen == ["utt_0001", "utt_0002"], "第二个事件仍必须被回调"
+    assert out["utt_0001"]["polished_text"] == "改好了。"
+    assert "callback" in out["utt_0001"]["error"]
+
+
+def test_malformed_raw_text_does_not_kill_worker():
+    polisher = Polisher(lambda ev: None, call=lambda prompt: '{"polished":"好。"}')
+    polisher.submit({"t": "asr_final", "utt_id": "u_bad", "start_ms": 0, "end_ms": 1, "raw_text": None})
+    polisher.submit(_event(uid="utt_0002"))
+    out = polisher.close(timeout=5)
+
+    assert "u_bad" in out
+    assert "utt_0002" in out
