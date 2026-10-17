@@ -26,6 +26,9 @@ UTTERANCE_KEYS = ("utt_id", "start_ms", "end_ms", "raw_text")
 # 进程内替换锁：不同 SessionStore 实例可能并发写同一目录（Windows 下 replace 需串行）
 _REPLACE_LOCK = threading.Lock()
 
+# 进程内追加锁：主线程与润色线程会并发 append，Windows 下需串行化整次写入
+_APPEND_LOCK = threading.Lock()
+
 
 def new_session_dir(root: Path, when: Optional[datetime] = None) -> Path:
     """创建 output/sessions/s_YYYYMMDD_HHMMSS（重名时追加 _1、_2…）。"""
@@ -51,8 +54,11 @@ def _atomic_write_json(path: Path, obj: Any) -> None:
 
 
 def _append_ndjson(path: Path, obj: Any) -> None:
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    # 先序列化再持锁打开写入，避免两线程的写入交错破坏行
+    line = json.dumps(obj, ensure_ascii=False) + "\n"
+    with _APPEND_LOCK:
+        with path.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(line)
 
 
 class SessionStore:

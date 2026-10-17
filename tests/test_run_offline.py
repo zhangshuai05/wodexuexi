@@ -143,3 +143,18 @@ def test_iter_audio_chunks_respects_max_seconds(tmp_path):
     chunks = list(run_offline.iter_audio_chunks(wav, 600, max_seconds=0.6))
     assert sum(len(c) for c, _ in chunks) == int(16000 * 0.6) * 2
     assert chunks[-1][1] is True
+
+
+def test_zero_sample_wav_still_finalizes(tmp_path):
+    wav = tmp_path / "empty.wav"
+    _write_wav(wav, seconds=0.0)
+    session_dir = tmp_path / "s_empty"
+
+    obj = run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
+        session_factory=lambda p, m: FakeSession(p),
+        models={},
+    )
+
+    assert obj["status"] == "transcript"
+    assert obj["utterances"], "0 采样 WAV 也必须走一次 is_final 收尾"

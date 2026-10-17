@@ -117,3 +117,25 @@ def test_concurrent_builds_from_two_instances_do_not_raise(tmp_path):
         thread.join()
 
     assert errors == []
+
+
+def test_concurrent_appends_do_not_corrupt_lines(tmp_path):
+    import json
+    import threading
+
+    store = SessionStore(tmp_path / "s_1")
+
+    def worker(n):
+        for i in range(50):
+            store.append_event({"t": "x", "n": n, "i": i})
+
+    threads = [threading.Thread(target=worker, args=(n,)) for n in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    lines = (store.dir / "events.ndjson").read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 100
+    for line in lines:
+        json.loads(line)  # 每行都必须是完整 JSON

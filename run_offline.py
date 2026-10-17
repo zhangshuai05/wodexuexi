@@ -101,7 +101,9 @@ def run(
 
     clock = time.monotonic()
     fed_seconds = 0.0
+    fed_any = False
     for chunk, is_last in iter_audio_chunks(wav, chunk_ms, max_seconds):
+        fed_any = True
         for ev in session.feed_pcm_chunk(chunk, is_final=is_last):
             handle(ev)
         if not fast:
@@ -109,6 +111,11 @@ def run(
             delay = fed_seconds - (time.monotonic() - clock)
             if delay > 0:
                 time.sleep(delay)
+
+    # 0 采样 WAV 不产出任何块：显式补一次收尾，确保 session 关闭录音文件
+    if not fed_any:
+        for ev in session.feed_pcm_chunk(b"", is_final=True):
+            handle(ev)
 
     store.write_transcript(session.completed_utterances, duration_ms=session.processed_ms)
     store.build_session_json()
