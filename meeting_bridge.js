@@ -52,6 +52,8 @@
   // 用最终 turns 重绘整篇记录；turns 为空时保留流式视图。
   function renderTurns(event) {
     var ui = window.MeetingUI;
+    // 重绘会清空列表；先记住滚动位置，避免长会议结束时跳回顶部
+    var scrollY = window.scrollY;
     rendering = true;
     try {
       if (typeof ui.reset === "function") {
@@ -91,6 +93,7 @@
       });
       ui.handleEvent({ t: "finish" });
     } finally {
+      window.scrollTo(0, scrollY);
       rendering = false;
     }
   }
@@ -194,6 +197,22 @@
         controller.abort();
         controller = null;
       }
+    };
+  }
+
+  // 结束会议：让服务端停止喂流，随即走正常收尾与回填（回放/麦克风共用）。
+  if (typeof window.MeetingUI.onEnd !== "function") {
+    window.MeetingUI.onEnd = function () {
+      if (typeof window.MeetingUI.handleEvent === "function") {
+        window.MeetingUI.handleEvent({
+          t: "error",
+          msg: "已请求结束，正在收尾并回填说话人…",
+          fatal: false
+        });
+      }
+      fetch("/api/stream_meeting/cancel", { method: "POST" }).catch(function (err) {
+        emitFatal(String(err));
+      });
     };
   }
 })();

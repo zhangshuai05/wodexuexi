@@ -96,6 +96,7 @@ def run(
     backfill_fn: Optional[Callable] = None,
     on_event: Optional[Callable[[Dict], None]] = None,
     on_progress: Optional[Callable[[Dict], None]] = None,
+    should_stop: Optional[Callable[[], bool]] = None,
 ) -> Dict:
     _validate_wav(wav)
     bootstrap.install()
@@ -157,8 +158,13 @@ def run(
     clock = time.monotonic()
     fed_seconds = 0.0
     fed_any = False
+    stopped_early = False
     try:
         for chunk, is_last in iter_audio_chunks(wav, chunk_ms, max_seconds):
+            # 用户点“结束会议”：停止喂流，走与自然结束相同的收尾与回填路径
+            if should_stop is not None and should_stop():
+                stopped_early = True
+                break
             fed_any = True
             for ev in session.feed_pcm_chunk(chunk, is_final=is_last):
                 handle(ev)
@@ -167,8 +173,8 @@ def run(
                 delay = fed_seconds - (time.monotonic() - clock)
                 if delay > 0:
                     time.sleep(delay)
-        # 0 采样 WAV 不产出任何块：显式补一次收尾，确保 session 关闭录音文件
-        if not fed_any:
+        # 0 采样 WAV 或提前结束：显式补一次收尾，确保 session 关闭录音文件
+        if not fed_any or stopped_early:
             for ev in session.feed_pcm_chunk(b"", is_final=True):
                 handle(ev)
     except BaseException:

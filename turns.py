@@ -14,6 +14,7 @@ FINAL_TURN_SPLIT_MS = 8000   # 最终合并：同一说话人也要在长静音�
 
 # 中文标点与汉字一样不插空格；其余字符（英文、数字等）之间补一个空格
 _CJK_PUNCT = "，。！？、；："
+_END_PUNCT = "，。！？、；：,.!?"
 
 
 def _is_cjk(ch: str) -> bool:
@@ -22,15 +23,18 @@ def _is_cjk(ch: str) -> bool:
 
 
 def join_texts(parts: List[str]) -> str:
-    """拼接多个文本片段；中文之间不插空格，其它情况补一个空格。"""
+    """拼接多个文本片段。
+
+    边界已有标点则直接相连；否则中文侧补逗号（长 turn 不连成一整串），
+    纯英文之间补空格。这是机械补标点，不改变原句段的措辞。
+    """
     joined = ""
     for part in parts:
         text = (part or "").strip()
         if not text:
             continue
-        # 仅当上一片段末尾与下一片段开头都不是中文时才补空格
-        if joined and not (_is_cjk(joined[-1]) or _is_cjk(text[0])):
-            joined += " "
+        if joined and joined[-1] not in _END_PUNCT:
+            joined += "，" if (_is_cjk(joined[-1]) or _is_cjk(text[0])) else " "
         joined += text
     return joined
 

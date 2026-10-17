@@ -88,7 +88,7 @@ def test_session_json_has_turns(tmp_path):
 
     assert len(obj["turns"]) == 1
     assert obj["turns"][0]["utterance_ids"] == ["utt_0001", "utt_0002"]
-    assert obj["turns"][0]["text"] == "大家早上好"
+    assert obj["turns"][0]["text"] == "大家，早上好"
     assert obj["turns"][0]["spk_label"] == "speaker_0"
 
 

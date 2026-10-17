@@ -127,6 +127,28 @@ def test_inject_bridge_is_idempotent():
     assert stream_service._inject_bridge(once) == once, "已有标记时不得重复注入"
 
 
+def test_cancel_endpoint_sets_stop_event(live_server):
+    base, _ = live_server
+    stream_service._CANCEL.clear()
+
+    status, _, _ = _post(base + "/api/stream_meeting/cancel", b"")
+
+    assert status == 200
+    assert stream_service._CANCEL.is_set()
+    stream_service._CANCEL.clear()
+
+
+def test_new_run_clears_stale_cancel(live_server):
+    base, _ = live_server
+    stream_service._CANCEL.set()
+
+    status, _, _ = _post(base + "/api/stream_meeting?fast=1", _wav_bytes(),
+                         {"Content-Type": "application/octet-stream"})
+
+    assert status == 200
+    assert stream_service._CANCEL.is_set() is False, "新一轮必须清掉上一轮残留的取消信号"
+
+
 def test_inject_bridge_without_body_tag_is_unchanged():
     html = b"<html>no body tag</html>"
     assert stream_service._inject_bridge(html) == html

@@ -26,18 +26,19 @@ def _utt(uid, start, end, text, spk_label=None, spk=None, polished=None,
 
 # ---- join_texts ----
 
-def test_join_texts_no_space_between_cjk():
-    assert join_texts(["大家", "早上好"]) == "大家早上好"
+def test_join_texts_adds_comma_between_cjk_fragments():
+    assert join_texts(["大家", "早上好"]) == "大家，早上好"
+    # 已有标点的边界不再补
     assert join_texts(["你好，", "世界。"]) == "你好，世界。"
-    assert join_texts(["  你好 ", "", "世界 "]) == "你好世界"
+    assert join_texts(["  你好 ", "", "世界 "]) == "你好，世界"
 
 
 def test_join_texts_single_space_between_ascii():
     assert join_texts(["hello", "world"]) == "hello world"
     assert join_texts(["hello", "  ", "again"]) == "hello again"
-    # 任一侧是中文就不补空格
-    assert join_texts(["hello", "你好"]) == "hello你好"
-    assert join_texts(["你好", "world"]) == "你好world"
+    # 任一侧是中文时补逗号而不是空格
+    assert join_texts(["hello", "你好"]) == "hello，你好"
+    assert join_texts(["你好", "world"]) == "你好，world"
 
 
 # ---- build_turns ----
@@ -59,7 +60,7 @@ def test_build_turns_merges_same_speaker_and_splits_on_gap_or_speaker():
         "turn_0001", "turn_0002", "turn_0003",
     ]
     assert turns[0]["utterance_ids"] == ["utt_0001", "utt_0002"]
-    assert turns[0]["text"] == "大家早上好"
+    assert turns[0]["text"] == "大家，早上好"
     assert turns[0]["start_ms"] == 0
     assert turns[0]["end_ms"] == 4000
     assert turns[0]["spk"] == 0
@@ -198,7 +199,7 @@ def test_tracker_starts_new_turn_after_gap():
     merged = tracker.assign({"t": "asr_final", "utt_id": "utt_0002",
                              "start_ms": 2999, "end_ms": 4000, "raw_text": "二"})
     assert merged["turn_id"] == "turn_0001"
-    assert merged["turn_text"] == "一二"
+    assert merged["turn_text"] == "一，二"
 
     split = tracker.assign({"t": "asr_final", "utt_id": "utt_0003",
                             "start_ms": 6000, "end_ms": 7000, "raw_text": "三"})
@@ -215,7 +216,7 @@ def test_tracker_unknown_llm_confirmed_falls_back_to_current_turn():
                          "polished_text": "二"})
 
     assert ev["turn_id"] == "turn_0001"
-    assert ev["turn_polished_text"] == "一二"
+    assert ev["turn_polished_text"] == "一，二"
     assert "utt_unknown" not in tracker.utt_turn, "llm_confirmed 不得回填归属"
 
 

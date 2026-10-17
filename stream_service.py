@@ -44,6 +44,8 @@ BRIDGE_TAG = b'<script src="/meeting_bridge.js"></script>\n'
 
 # 同一时刻只允许一场会议；第二个请求直接 409。
 _SESSION_LOCK = threading.Lock()
+# 用户点“结束会议”时置位；喂流循环每块检查一次，走正常收尾与回填
+_CANCEL = threading.Event()
 
 # 模型单例：首次请求/预加载时装载，之后复用。
 _MODELS: Optional[Dict] = None
@@ -273,6 +275,10 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler 约定
         parsed = urlsplit(self.path)
+        if parsed.path == "/api/stream_meeting/cancel":
+            _CANCEL.set()
+            self._send_json(200, {"ok": True})
+            return
         if parsed.path != "/api/stream_meeting":
             self._send_json(404, {"error": "not found"})
             return
@@ -285,6 +291,8 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
         if not _SESSION_LOCK.acquire(blocking=False):
             self._send_json(409, {"error": "已有会议在运行"})
             return
+        # 新一轮开始，清掉上一轮可能残留的取消信号
+        _CANCEL.clear()
 
         tmpdir: Optional[Path] = None
         response_started = False
@@ -357,6 +365,7 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
                 fast=fast, models=models,
                 on_event=self._emit_event,
                 on_progress=self._emit_event,
+                should_stop=_CANCEL.is_set,
             )
 
             # run() 返回时 session.json 已合并完成；diarization.json 可能存在也可能不存在

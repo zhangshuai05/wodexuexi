@@ -329,3 +329,19 @@ def test_backfill_failure_still_closes_polisher(tmp_path):
 
     assert len(created) == 1
     assert created[0].closed is True, "回填异常时也必须关闭润色器"
+
+
+def test_should_stop_still_freezes_and_writes_transcript(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav, seconds=1.0)
+    session_dir = tmp_path / "s_stop"
+
+    obj = run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
+        session_factory=lambda p, m: FakeSession(p),
+        models={},
+        should_stop=lambda: True,
+    )
+
+    assert obj["status"] == "transcript"
+    assert obj["utterances"], "提前结束也必须冻结已锁定句子"
