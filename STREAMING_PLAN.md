@@ -281,7 +281,7 @@ R8008_M8013 `refined 0.5081967213114754` / `coverage 0.51775956284153`）。
 {"t": "llm_confirmed", "utt_id": "utt_0001", "start_ms": 600,  "end_ms": 2950,
                        "raw_text": "大家早上好今天我们把思露整理一下",
                        "polished_text": "大家早上好，今天我们把思路整理一下。",
-                       "corrected": true, "error": null}
+                       "corrected": true, "bypassed": false, "error": null}
 
 {"t": "progress",      "msg": "会议录音已结束，正在执行全局声纹聚类与说话人回填…"}
 
