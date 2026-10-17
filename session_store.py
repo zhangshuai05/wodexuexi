@@ -19,6 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from turns import build_turns
+
 SCHEMA_VERSION = 1
 
 UTTERANCE_KEYS = ("utt_id", "start_ms", "end_ms", "raw_text")
@@ -172,6 +174,8 @@ class SessionStore:
                 "ended_at": transcript.get("ended_at"),
                 "duration_ms": transcript.get("duration_ms"),
                 "utterances": merged,
+                # utterances 是声纹/审计粒度；turns 是显示/导出粒度
+                "turns": build_turns(merged),
             }
             _atomic_write_json(self.dir / "session.json", obj)
             return obj

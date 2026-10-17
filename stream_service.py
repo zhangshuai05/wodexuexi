@@ -371,6 +371,7 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
                 "n_clusters": _count_clusters(mapping),
                 "mapping": mapping,
                 "batch": {"done": len(mapping), "total": total},
+                "turns": session_obj.get("turns", []),
             })
             self._emit_event({"t": "finish"})
             self._end_chunks_safely()

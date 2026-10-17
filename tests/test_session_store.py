@@ -73,6 +73,25 @@ def test_diarization_sets_status_and_fields(tmp_path):
     assert obj["utterances"][0]["spk_label"] == "speaker_0"
 
 
+def test_session_json_has_turns(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript([
+        _utterance("utt_0001", 0, 1000, "大家"),
+        _utterance("utt_0002", 2000, 3000, "早上好"),
+    ], duration_ms=3000)
+    store.write_diarization({
+        "utt_0001": {"spk": 0, "spk_label": "speaker_0"},
+        "utt_0002": {"spk": 0, "spk_label": "speaker_0"},
+    })
+
+    obj = store.build_session_json()
+
+    assert len(obj["turns"]) == 1
+    assert obj["turns"][0]["utterance_ids"] == ["utt_0001", "utt_0002"]
+    assert obj["turns"][0]["text"] == "大家早上好"
+    assert obj["turns"][0]["spk_label"] == "speaker_0"
+
+
 def test_build_is_idempotent(tmp_path):
     store = SessionStore(tmp_path / "s_1")
     store.write_transcript([_utterance()], duration_ms=1000)

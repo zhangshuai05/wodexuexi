@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
 import bootstrap
+from turns import StreamTurnTracker
 
 
 SAMPLE_RATE = 16000
@@ -112,6 +113,12 @@ def run(
 
     session = (session_factory or _default_session)(store.audio_path, models)
 
+    # 每场会议一个 turn 归属器：只在对外通知时补充字段，落盘事件保持单句原形
+    tracker = StreamTurnTracker()
+
+    def emit(ev: Dict) -> None:
+        _notify(on_event, tracker.assign(ev))
+
     polished_buffer: Dict[str, Dict] = {}
 
     def on_polish(ev: Dict) -> None:
@@ -126,7 +133,7 @@ def run(
         store.write_polished(polished_buffer)
         store.build_session_json()
         # 落盘之后再通知外部（HTTP 客户端断线由 _notify 吞掉）
-        _notify(on_event, ev)
+        emit(ev)
 
     polisher = None
     if not no_llm:
@@ -140,12 +147,12 @@ def run(
             store.append_event(ev)
             # 先发 asr_final 再 submit：FakePolisher/异常路径可能同步回调 llm_confirmed，
             # 事件顺序必须保持 asr_final -> llm_confirmed。
-            _notify(on_event, ev)
+            emit(ev)
             if polisher is not None:
                 polisher.submit(ev)
         else:
             store.append_event(ev)
-            _notify(on_event, ev)
+            emit(ev)
 
     clock = time.monotonic()
     fed_seconds = 0.0

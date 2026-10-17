@@ -174,6 +174,31 @@ D:\Deepseek\
    服务层在 `to_contract` 中**只换算一次**（`p = int(label.split("_")[1]) - 1`），
    并且**同时**下发 `spk` 与 `spk_label`，避免前端自己减 1 减错。
 
+### 3.2 session.json 追加 `turns[]`（显示/导出层）
+
+> **utterances = 声纹/审计粒度，turns = 显示/导出粒度。**
+
+`session.json` 在原有 `utterances[]` 之外新增 `turns[]`；单句契约（上表）与六文件契约不变。
+
+```jsonc
+{
+  "turn_id": "turn_0001",          // 1-based，四位零填充
+  "spk": 0,                        // 与 utterances[].spk 同义；无回填时为 null
+  "spk_label": "speaker_0",        // 无回填时为 null
+  "start_ms": 600,                 // 首个 utterance 的起点
+  "end_ms": 2950,                  // 最后一个 utterance 的终点
+  "text": "大家早上好，今天我们把思路整理一下。",  // 按序拼接 polished_text（缺失回退 raw_text）
+  "utterance_ids": ["utt_0001", "utt_0002"]
+}
+```
+
+合并规则（`turns.build_turns`）：
+
+- 有 `spk_label`：相邻且标签相同、且 `start_ms - 上一句 end_ms < 8000`（`FINAL_TURN_SPLIT_MS`）才合并；
+  长静音处同一说话人也断开。
+- 全部 `spk_label` 为 `null`（`--no-diar`）：只按 `STREAM_TURN_GAP_MS = 2000` 的间隔合并，
+  不得退化成整场一个 turn。
+
 ---
 
 ## 四、三阶段流水线
@@ -273,21 +298,29 @@ R8008_M8013 `refined 0.5081967213114754` / `coverage 0.51775956284153`）。
 
 ```jsonc
 {"t": "asr_partial",   "utt_id": "utt_0001", "start_ms": 600,  "current_ms": 1800,
-                       "text": "大家早上好今天我们把思露"}
+                       "text": "大家早上好今天我们把思露",
+                       "turn_id": "turn_0001", "turn_text": "大家早上好今天我们把思露"}
 
 {"t": "asr_final",     "utt_id": "utt_0001", "start_ms": 600,  "end_ms": 2950,
-                       "raw_text": "大家早上好今天我们把思露整理一下"}
+                       "raw_text": "大家早上好今天我们把思露整理一下",
+                       "turn_id": "turn_0001", "turn_text": "大家早上好今天我们把思露整理一下"}
 
 {"t": "llm_confirmed", "utt_id": "utt_0001", "start_ms": 600,  "end_ms": 2950,
                        "raw_text": "大家早上好今天我们把思露整理一下",
                        "polished_text": "大家早上好，今天我们把思路整理一下。",
-                       "corrected": true, "bypassed": false, "error": null}
+                       "corrected": true, "bypassed": false, "error": null,
+                       "turn_id": "turn_0001",
+                       "turn_polished_text": "大家早上好，今天我们把思路整理一下。"}
 
 {"t": "progress",      "msg": "会议录音已结束，正在执行全局声纹聚类与说话人回填…"}
 
 {"t": "speaker_diarized", "n_clusters": 3,
                           "mapping": {"utt_0001": {"spk": 0, "spk_label": "speaker_0", "overlap_spk": null},
-                                      "utt_0002": {"spk": 1, "spk_label": "speaker_1", "overlap_spk": null}}}
+                                      "utt_0002": {"spk": 1, "spk_label": "speaker_1", "overlap_spk": null}},
+                          "turns": [{"turn_id": "turn_0001", "spk": 0, "spk_label": "speaker_0",
+                                     "start_ms": 600, "end_ms": 2950,
+                                     "text": "大家早上好，今天我们把思路整理一下。",
+                                     "utterance_ids": ["utt_0001"]}]}
 
 {"t": "error",         "msg": "...", "fatal": false}
 
@@ -297,6 +330,10 @@ R8008_M8013 `refined 0.5081967213114754` / `coverage 0.51775956284153`）。
 **顺序保证**：`asr_partial*` → `asr_final` →（异步）`llm_confirmed`。
 `llm_confirmed` **一定晚于**同 `utt_id` 的 `asr_final`，但不保证与其它 `utt_id` 的相对顺序。
 `speaker_diarized` 一定在 `finish` 之前、且在阶段 3 完成后。
+
+**turn 字段是显示层叠加**：`turn_id` 与 `turn_text` / `turn_polished_text` 不替换单句字段；
+`utterances` 与 `events.ndjson` 中仍保留 `utt_id` 级原始事件。`speaker_diarized` 的 `turns[]`
+为最终合并结果（形状见 §3.2），前端据此一次性重绘；为空时保留流式视图。
 
 ### 5.2 前端渲染逻辑（参考实现，交前端 AI）
 

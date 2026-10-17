@@ -279,6 +279,31 @@ def test_on_event_receives_pipeline_events(tmp_path):
     )
 
 
+def test_events_have_turn_fields(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+    session_dir = tmp_path / "s_turn_fields"
+    seen = []
+
+    run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True,
+        session_factory=lambda p, m: FakeSession(p),
+        polisher_factory=FakePolisher,
+        backfill_fn=lambda wav_path, utts, models, mode: {"utt_0001": "Speaker_1"},
+        models={},
+        on_event=seen.append,
+    )
+
+    assert seen
+    assert all(ev.get("turn_id") for ev in seen), "每条对外事件都必须带 turn_id"
+    for ev in seen:
+        if ev["t"] in ("asr_partial", "asr_final"):
+            assert "turn_text" in ev
+    confirmed = next(ev for ev in seen if ev["t"] == "llm_confirmed")
+    assert confirmed["turn_id"] == "turn_0001"
+    assert confirmed["turn_polished_text"] == "你好。"
+
+
 def test_backfill_failure_still_closes_polisher(tmp_path):
     wav = tmp_path / "in.wav"
     _write_wav(wav)

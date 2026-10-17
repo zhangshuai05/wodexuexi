@@ -25,6 +25,67 @@
     }
   }
 
+  // 把服务端 turn 层字段适配成页面原有的单句事件形状。
+  function adaptEvent(event) {
+    if (!event) {
+      return event;
+    }
+    if (event.turn_id) {
+      event.utt_id = event.turn_id;
+    }
+    if (event.t === "asr_partial" && typeof event.turn_text === "string") {
+      event.text = event.turn_text;
+    }
+    if (event.t === "asr_final" && typeof event.turn_text === "string") {
+      event.raw_text = event.turn_text;
+    }
+    if (event.t === "llm_confirmed" && typeof event.turn_polished_text === "string") {
+      event.polished_text = event.turn_polished_text;
+    }
+    return event;
+  }
+
+  // 用最终 turns 重绘整篇记录；turns 为空时保留流式视图。
+  function renderTurns(event) {
+    var ui = window.MeetingUI;
+    if (typeof ui.reset === "function") {
+      ui.reset();
+    }
+    var mapping = {};
+    for (var i = 0; i < event.turns.length; i += 1) {
+      var turn = event.turns[i];
+      ui.handleEvent({
+        t: "asr_final",
+        utt_id: turn.turn_id,
+        start_ms: turn.start_ms,
+        end_ms: turn.end_ms,
+        raw_text: turn.text
+      });
+      ui.handleEvent({
+        t: "llm_confirmed",
+        utt_id: turn.turn_id,
+        start_ms: turn.start_ms,
+        end_ms: turn.end_ms,
+        raw_text: turn.text,
+        polished_text: turn.text,
+        corrected: false,
+        bypassed: false,
+        error: null
+      });
+      mapping[turn.turn_id] = {
+        spk: turn.spk,
+        spk_label: turn.spk_label,
+        overlap_spk: null
+      };
+    }
+    ui.handleEvent({
+      t: "speaker_diarized",
+      n_clusters: event.n_clusters,
+      mapping: mapping
+    });
+    ui.handleEvent({ t: "finish" });
+  }
+
   // 处理一行完整的 NDJSON；空行与单行 JSON 解析失败都直接忽略。
   function dispatchLine(line) {
     var text = line.replace(/\r$/, "");
@@ -38,7 +99,12 @@
       return;
     }
     if (typeof window.MeetingUI.handleEvent === "function") {
-      window.MeetingUI.handleEvent(event);
+      if (event.t === "speaker_diarized" &&
+          Array.isArray(event.turns) && event.turns.length > 0) {
+        renderTurns(event);
+        return;
+      }
+      window.MeetingUI.handleEvent(adaptEvent(event));
     }
   }
 

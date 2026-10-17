@@ -163,6 +163,44 @@ def test_stream_meeting_emits_contract_events(live_server):
     assert events[-1]["t"] == "finish"
 
 
+def test_speaker_diarized_includes_turns(live_server, monkeypatch):
+    base, _ = live_server
+    turns = [{
+        "turn_id": "turn_0001",
+        "spk": 0,
+        "spk_label": "speaker_0",
+        "start_ms": 0,
+        "end_ms": 800,
+        "text": "你好",
+        "utterance_ids": ["utt_0001"],
+    }]
+
+    def fake_with_turns(wav, session_dir, **kwargs):
+        store = SessionStore(Path(session_dir))
+        store.write_transcript([UTT], duration_ms=800)
+        store.write_polished({"utt_0001": POLISHED})
+        store.write_diarization(DIARIZATION)
+        obj = store.build_session_json()
+        obj["turns"] = turns
+        (Path(session_dir) / "session.json").write_text(
+            json.dumps(obj, ensure_ascii=False), encoding="utf-8")
+        return obj
+
+    monkeypatch.setattr(stream_service, "_PIPELINE", fake_with_turns)
+
+    status, _, body = _post(
+        base + "/api/stream_meeting?fast=1", _wav_bytes(),
+        {"Content-Type": "application/octet-stream"},
+    )
+
+    assert status == 200
+    events = [json.loads(line) for line in body.decode("utf-8").splitlines() if line.strip()]
+    diarized = next(ev for ev in events if ev["t"] == "speaker_diarized")
+    assert diarized["turns"] == turns
+    assert diarized["mapping"] == DIARIZATION
+    assert diarized["batch"] == {"done": 1, "total": 1}
+
+
 def test_filename_is_sanitized(live_server):
     base, captured = live_server
     _post(base + "/api/stream_meeting?name=../../evil.wav", _wav_bytes(),
