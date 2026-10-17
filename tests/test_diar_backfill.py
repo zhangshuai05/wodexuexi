@@ -17,6 +17,16 @@ def test_to_contract_converts_one_based_label_to_zero_based_spk():
     assert out == {"utt_0001": {"spk": 2, "spk_label": "speaker_2"}}
 
 
+def test_to_contract_rejects_speaker_zero():
+    with pytest.raises(ValueError):
+        to_contract({"u": "Speaker_0"})
+
+
+def test_to_contract_rejects_malformed_label():
+    with pytest.raises(ValueError):
+        to_contract({"u": "spk1"})
+
+
 def test_to_contract_handles_two_speakers():
     out = to_contract({"a": "Speaker_1", "b": "Speaker_2"})
     assert out["a"] == {"spk": 0, "spk_label": "speaker_0"}
@@ -34,6 +44,31 @@ def test_load_utterances_reads_jsonl_and_keeps_last(tmp_path):
     assert [u["utt_id"] for u in utts] == ["u1", "u2"]
     assert utts[0]["raw_text"] == "新"
     assert set(utts[0]) == {"utt_id", "start_ms", "end_ms", "raw_text"}
+
+
+def test_load_utterances_skips_corrupt_lines(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.append_utterance({"utt_id": "u1", "start_ms": 0, "end_ms": 10, "raw_text": "好"})
+    with (store.dir / "utterances.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write('{"utt_id": "u2", "start_ms": 10, "end_ms"')  # 截断的损坏行
+
+    utts = load_utterances(store.dir)
+
+    assert [u["utt_id"] for u in utts] == ["u1"]
+
+
+def test_load_utterances_falls_back_on_empty_jsonl(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    (store.dir / "utterances.jsonl").write_text("", encoding="utf-8")
+    store.write_transcript(
+        [{"utt_id": "u1", "start_ms": 0, "end_ms": 10, "raw_text": "好"}],
+        duration_ms=10,
+    )
+
+    utts = load_utterances(store.dir)
+
+    assert [u["utt_id"] for u in utts] == ["u1"]
+    assert utts[0]["raw_text"] == "好"
 
 
 def test_run_backfill_writes_contract_and_merges(tmp_path):

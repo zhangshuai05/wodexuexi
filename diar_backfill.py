@@ -12,17 +12,23 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 import bootstrap
 
+_LABEL_RE = re.compile(r"^Speaker_(\d+)$")
+
 
 def to_contract(mapping: Dict[str, str]) -> Dict[str, Dict]:
     out: Dict[str, Dict] = {}
     for utt_id, label in mapping.items():
-        index = int(str(label).split("_")[1]) - 1
+        match = _LABEL_RE.match(str(label))
+        if match is None or int(match.group(1)) < 1:
+            raise ValueError(f"上游返回了无法识别的说话人标签: {label!r} (utt_id={utt_id})")
+        index = int(match.group(1)) - 1
         out[utt_id] = {"spk": index, "spk_label": f"speaker_{index}"}
     return out
 
@@ -39,19 +45,29 @@ def _normalize_row(row: Dict) -> Dict:
 def load_utterances(session_dir: Path) -> List[Dict]:
     """从 utterances.jsonl 读句表，按 utt_id 去重（后写覆盖先写）。
 
-    jsonl 不存在时回退读 transcript.json（崩溃后重跑、或只有 T+0 全量文本的场景）。
+    崩溃恢复场景：跳过损坏/不完整的行；若一行有效的都没有，回退到 transcript.json。
     """
     session_dir = Path(session_dir)
     path = session_dir / "utterances.jsonl"
+    rows: Dict[str, Dict] = {}
+    skipped = 0
     if path.exists():
-        rows: Dict[str, Dict] = {}
         with path.open("r", encoding="utf-8") as handle:
             for line in handle:
                 line = line.strip()
                 if not line:
                     continue
-                row = json.loads(line)
-                rows[row["utt_id"]] = _normalize_row(row)
+                try:
+                    row = _normalize_row(json.loads(line))
+                    rows[row["utt_id"]] = row
+                except (json.JSONDecodeError, KeyError, TypeError):
+                    skipped += 1
+                    continue
+
+    if skipped:
+        print(f"[backfill] 跳过 {skipped} 行损坏的 utterances.jsonl", flush=True)
+
+    if rows:
         return list(rows.values())
 
     transcript = session_dir / "transcript.json"

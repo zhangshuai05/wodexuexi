@@ -24,6 +24,7 @@ MAX_GROWTH = 1.5
 MAX_SHRINK = 0.7
 CONTEXT_SENTENCES = 3
 PUNCTUATION = "，。！？、,.!? 　"
+CJK_NUMERALS = "零〇一二三四五六七八九十百千万亿两"
 
 PROMPT_TMPL = """你是 ASR 转写纠错器。只做两件事：改同音/误识别的字，补标点。
 严格禁止：改词序、增删内容、改数字、改专有名词、删口语重复、去语气词、改写成书面语。
@@ -46,7 +47,7 @@ def is_short(raw: str) -> bool:
 
 
 def _digits(text: str) -> List[str]:
-    return sorted(ch for ch in text if ch.isdigit())
+    return sorted(ch for ch in text if ch.isdigit() or ch in CJK_NUMERALS)
 
 
 def accept_rewrite(raw: str, polished: str) -> bool:

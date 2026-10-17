@@ -178,3 +178,41 @@ def test_default_session_pins_end_silence(monkeypatch):
     run_offline._default_session("x.wav", {"stream_asr": None, "vad": None})
 
     assert captured["max_end_silence_time"] == 1000, "断句阈值必须显式 pin，不能继承上游默认值"
+
+
+def test_stereo_wav_is_rejected(tmp_path):
+    wav = tmp_path / "stereo.wav"
+    sf.write(str(wav), np.zeros((16000, 2), dtype=np.int16), 16000, subtype="PCM_16")
+
+    with pytest.raises(SystemExit):
+        run_offline.run(wav, tmp_path / "s_stereo", no_llm=True, no_diar=True, models={})
+
+
+class _FlakySession(FakeSession):
+    """第二次 feed 抛异常，用于验证送流中断时的兜底落盘。"""
+
+    def __init__(self, wav_path, fail_on=2):
+        super().__init__(wav_path)
+        self.calls = 0
+        self.fail_on = fail_on
+
+    def feed_pcm_chunk(self, pcm_bytes, is_final=False):
+        self.calls += 1
+        if self.calls == self.fail_on:
+            raise RuntimeError("boom")
+        return super().feed_pcm_chunk(pcm_bytes, is_final=is_final)
+
+
+def test_exception_mid_feed_still_writes_transcript(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav, seconds=2.0)
+    session_dir = tmp_path / "s_boom"
+
+    with pytest.raises(RuntimeError):
+        run_offline.run(
+            wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
+            session_factory=lambda p, m: _FlakySession(p),
+            models={},
+        )
+
+    assert (session_dir / "transcript.json").exists()

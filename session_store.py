@@ -61,6 +61,16 @@ def _append_ndjson(path: Path, obj: Any) -> None:
             handle.write(line)
 
 
+def _validated_row(utt: Dict[str, Any]) -> Dict[str, Any]:
+    """契约四键必须齐全，且 utt_id/start_ms/end_ms 不得为 None（raw_text 允许 ""）。"""
+    missing = [key for key in UTTERANCE_KEYS if key not in utt]
+    missing += [key for key in ("utt_id", "start_ms", "end_ms")
+                if key in utt and utt[key] is None]
+    if missing:
+        raise ValueError(f"utterance 缺少字段: {missing}")
+    return {key: utt[key] for key in UTTERANCE_KEYS}
+
+
 class SessionStore:
     """一个 session 目录的读写门面。
 
@@ -84,8 +94,7 @@ class SessionStore:
     # ---- 写入 ----
 
     def append_utterance(self, utt: Dict[str, Any]) -> None:
-        row = {key: utt.get(key) for key in UTTERANCE_KEYS}
-        _append_ndjson(self.dir / "utterances.jsonl", row)
+        _append_ndjson(self.dir / "utterances.jsonl", _validated_row(utt))
 
     def append_event(self, ev: Dict[str, Any]) -> None:
         _append_ndjson(self.dir / "events.ndjson", ev)
@@ -99,9 +108,7 @@ class SessionStore:
             "started_at": self.started_at,
             "ended_at": datetime.now().astimezone().isoformat(timespec="seconds"),
             "duration_ms": int(duration_ms),
-            "utterances": [
-                {key: utt.get(key) for key in UTTERANCE_KEYS} for utt in utterances
-            ],
+            "utterances": [_validated_row(utt) for utt in utterances],
         }
         path = self.dir / "transcript.json"
         _atomic_write_json(path, obj)
@@ -123,7 +130,8 @@ class SessionStore:
         path = self.dir / name
         if not path.exists():
             return None
-        return json.loads(path.read_text(encoding="utf-8"))
+        with _REPLACE_LOCK:
+            return json.loads(path.read_text(encoding="utf-8"))
 
     # ---- 合并 ----
 
@@ -153,7 +161,7 @@ class SessionStore:
             obj = {
                 "schema_version": SCHEMA_VERSION,
                 "session_id": self.session_id,
-                "status": "diarized" if diarization is not None else "transcript",
+                "status": "diarized" if diarization else "transcript",
                 "audio": str(self.audio_path),
                 "started_at": transcript.get("started_at", self.started_at),
                 "ended_at": transcript.get("ended_at"),

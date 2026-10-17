@@ -37,5 +37,7 @@ def test_real_smoke_full(tmp_path):
         chunk_ms=600, fast=True, no_llm=True,
     )
     assert obj["status"] == "diarized"
+    assert obj["utterances"], "完整链路必须产出至少一句，否则回填断言是真空通过"
+    assert all(u["spk_label"] == f"speaker_{u['spk']}" for u in obj["utterances"])
     assert all(u["spk"] is not None for u in obj["utterances"])
     assert all(u["spk_label"].startswith("speaker_") for u in obj["utterances"])

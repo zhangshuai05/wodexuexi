@@ -38,6 +38,10 @@ def test_accept_rewrite_rejects_digit_change():
     assert accept_rewrite("我们3点开会", "我们4点开会") is False
 
 
+def test_digit_guard_sees_chinese_numerals():
+    assert accept_rewrite("我们三点开会", "我们四点开会") is False
+
+
 def test_accept_rewrite_rejects_empty():
     assert accept_rewrite("你好", "   ") is False
 

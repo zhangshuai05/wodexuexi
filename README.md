@@ -80,7 +80,11 @@ C:\Users\31817\miniconda3\envs\funasr\python.exe run_offline.py `
 ## Session 六文件契约
 
 六个契约文件之外，`session_audio.wav` 是流式边收边写的音频旁路（由上游 `StreamingSession` 负责，
-`SessionStore` 不做写入）：16 kHz 单声道 PCM_16，与输入等长，是采样点时钟的唯一真相。
+`SessionStore` 不做写入）：16 kHz 单声道 PCM_16，与输入等长——使用 `--max-seconds` 时以**截断后**的
+送流长度为等；它是采样点时钟的唯一真相。
+
+`--no-llm` 模式下 `polished.json` 不会创建：此时实际契约是「五个文件 + `session_audio.wav`」，
+而不是六个文件。
 
 所有 JSON 均由 `session_store.SessionStore` 写入：`*.json` 走「临时文件 + `os.replace`」原子替换，
 `*.jsonl` / `*.ndjson` 逐行追加（进程内加锁）。`session.json` 是 `transcript.json` + 可选
@@ -182,8 +186,8 @@ C:\Users\31817\miniconda3\envs\funasr\python.exe run_offline.py `
 {"t": "llm_confirmed", "utt_id": "utt_0001", "start_ms": 0, "end_ms": 600, "raw_text": "喂你", "polished_text": "喂你。", "corrected": false, "bypassed": true, "error": null}
 ```
 
-顺序保证：同句 `asr_final` 早于 `llm_confirmed`；不同句的 `llm_confirmed` 之间不保证顺序
-（单消费者 FIFO 按 `asr_final` 顺序处理）。
+顺序保证：同句 `asr_final` 早于 `llm_confirmed`；跨句的 `llm_confirmed` 按对应 `asr_final`
+的提交顺序处理（单消费者 FIFO）。只保证上述两条，与其他事件类型的交错顺序不做保证。
 
 ## 说话人回填独立重跑
 

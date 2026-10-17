@@ -122,6 +122,9 @@ from pathlib import Path
 
 REPO = Path(r"D:\Deepseek\diarization_cl-main")
 
+# 本项目根目录：必须始终排在 sys.path 最前，避免被上游同名模块遮蔽
+_LOCAL = Path(__file__).resolve().parent
+
 _SUBPATHS: tuple[Path, ...] = (
     REPO / ".zhang",
     REPO / "AliMeeting",
@@ -131,11 +134,19 @@ _SUBPATHS: tuple[Path, ...] = (
 
 
 def install() -> None:
-    """幂等地把上游路径插到 sys.path 最前面。"""
+    """幂等地把上游路径插到 sys.path 最前面。
+
+    上游目录之后，本项目目录始终被强制放在 sys.path 首位，
+    保证与上游同名的本地模块（如 run_offline、stream_llm_polish）不被遮蔽。
+    """
     for path in _SUBPATHS:
         text = str(path)
         if text not in sys.path:
             sys.path.insert(0, text)
+    local = str(_LOCAL)
+    if local in sys.path:
+        sys.path.remove(local)
+    sys.path.insert(0, local)
 
 
 def check_paths() -> dict[str, bool]:
@@ -329,6 +340,9 @@ SCHEMA_VERSION = 1
 
 UTTERANCE_KEYS = ("utt_id", "start_ms", "end_ms", "raw_text")
 
+# 进程内追加锁：主线程与润色线程会并发 append，Windows 下需串行化整次写入
+_APPEND_LOCK = threading.Lock()
+
 
 def new_session_dir(root: Path, when: Optional[datetime] = None) -> Path:
     """创建 output/sessions/s_YYYYMMDD_HHMMSS（重名时追加 _1、_2…）。"""
@@ -351,8 +365,11 @@ def _atomic_write_json(path: Path, obj: Any) -> None:
 
 
 def _append_ndjson(path: Path, obj: Any) -> None:
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    # 先序列化再持锁打开写入，避免两线程的写入交错破坏行
+    line = json.dumps(obj, ensure_ascii=False) + "\n"
+    with _APPEND_LOCK:
+        with path.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(line)
 
 
 class SessionStore:
@@ -447,7 +464,7 @@ class SessionStore:
             obj = {
                 "schema_version": SCHEMA_VERSION,
                 "session_id": self.session_id,
-                "status": "diarized" if diarization is not None else "transcript",
+                "status": "diarized" if diarization else "transcript",
                 "audio": str(self.audio_path),
                 "started_at": transcript.get("started_at", self.started_at),
                 "ended_at": transcript.get("ended_at"),

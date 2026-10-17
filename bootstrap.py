@@ -21,6 +21,29 @@ _SUBPATHS: tuple[Path, ...] = (
     REPO / "scripts" / "evaluation",
 )
 
+BASELINE = {
+    # 2026-10-17 14:06 本机基线；上游由另一个 AI 并行修改，变更时需复核后刷新
+    "streaming_asr_engine.py": ("f65dd78a03b50619", 14087),
+    "offline_diarizer.py": ("8fd519e6700e08da", 6357),
+}
+
+
+def upstream_fingerprint() -> dict[str, str]:
+    """返回与基线不一致的上游模块（空 dict = 一致）。缺失也算不一致。"""
+    import hashlib
+
+    drift: dict[str, str] = {}
+    for name, (expected_hash, expected_size) in BASELINE.items():
+        path = REPO / ".zhang" / name
+        if not path.exists():
+            drift[name] = "missing"
+            continue
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()[:16]
+        if digest != expected_hash or len(data) != expected_size:
+            drift[name] = f"changed: {digest} {len(data)}B (baseline {expected_hash} {expected_size}B)"
+    return drift
+
 
 def install() -> None:
     """幂等地把上游路径插到 sys.path 最前面。

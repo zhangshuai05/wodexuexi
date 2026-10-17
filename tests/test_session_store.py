@@ -3,6 +3,8 @@ import json
 import threading
 from datetime import datetime
 
+import pytest
+
 from session_store import SessionStore, new_session_dir
 
 
@@ -38,6 +40,23 @@ def test_polished_is_applied(tmp_path):
     assert obj["utterances"][0]["polished_text"] == "你好。"
     assert obj["utterances"][0]["corrected"] is True
     assert obj["status"] == "transcript", "润色不改变 status"
+
+
+def test_empty_diarization_does_not_flip_status(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript([_utterance()], duration_ms=1000)
+    store.write_diarization({})
+
+    obj = store.build_session_json()
+
+    assert obj["status"] == "transcript", "空 mapping 不代表已回填"
+
+
+def test_append_utterance_rejects_missing_keys(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+
+    with pytest.raises(ValueError):
+        store.append_utterance({"utt_id": "utt_0001", "start_ms": 0, "raw_text": "你好"})
 
 
 def test_diarization_sets_status_and_fields(tmp_path):
