@@ -389,8 +389,24 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
                 shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+class _SingleInstanceServer(ThreadingHTTPServer):
+    """禁止 SO_REUSEADDR 双绑。
+
+    Windows 上 HTTPServer 默认 allow_reuse_address=1，两个进程可以同时绑同一端口；
+    结果旧进程会静默接管请求，跑的是旧代码。2026-10-17 实际踩过：turn 层上线后
+    页面仍由旧进程服务，session.json 没有 turns。
+    """
+
+    allow_reuse_address = False
+
+
 def make_server(host: str = SERVICE_HOST, port: int = SERVICE_PORT) -> ThreadingHTTPServer:
-    server = ThreadingHTTPServer((host, port), StreamRequestHandler)
+    try:
+        server = _SingleInstanceServer((host, port), StreamRequestHandler)
+    except OSError as exc:
+        raise SystemExit(
+            f"端口 {host}:{port} 绑定失败（可能已有服务在运行）: {exc}"
+        ) from exc
     server.daemon_threads = True
     return server
 
