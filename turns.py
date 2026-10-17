@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import threading
 from typing import Dict, List, Optional
 
 STREAM_TURN_GAP_MS = 2000    # 流式显示：与上一句间隔超过它才换行
@@ -98,6 +99,7 @@ class StreamTurnTracker:
     """
 
     def __init__(self, gap_ms: int = STREAM_TURN_GAP_MS) -> None:
+        self._lock = threading.Lock()
         self.gap_ms = gap_ms
         self.utt_turn: Dict[str, str] = {}                 # utt_id -> turn_id
         self.turn_texts: Dict[str, Dict[str, str]] = {}    # turn_id -> {utt_id: 文本}，插入序
@@ -139,36 +141,40 @@ class StreamTurnTracker:
 
     def assign(self, ev: Dict) -> Dict:
         """就地补充并返回事件；未知事件类型原样返回，保证流水线不被拖垮。"""
-        kind = ev.get("t")
-        utt_id = ev.get("utt_id")
+        # 喂入线程（run_offline）与润色线程（on_polish）会并发调用；
+        # 整个归属/累计文本更新必须是原子的，否则遍历 turn_texts 时插入会抛
+        # RuntimeError: dictionary changed size during iteration。
+        with self._lock:
+            kind = ev.get("t")
+            utt_id = ev.get("utt_id")
 
-        if kind == "asr_partial" and utt_id is not None:
-            turn_id = self._turn_for(ev)
-            self.turn_texts[turn_id][utt_id] = ev.get("text") or ""
-            ev["turn_id"] = turn_id
-            ev["turn_text"] = join_texts(self._texts(turn_id))
+            if kind == "asr_partial" and utt_id is not None:
+                turn_id = self._turn_for(ev)
+                self.turn_texts[turn_id][utt_id] = ev.get("text") or ""
+                ev["turn_id"] = turn_id
+                ev["turn_text"] = join_texts(self._texts(turn_id))
+                return ev
+
+            if kind == "asr_final" and utt_id is not None:
+                turn_id = self._turn_for(ev)
+                self.turn_texts[turn_id][utt_id] = ev.get("raw_text") or ""
+                ev["turn_id"] = turn_id
+                ev["turn_text"] = join_texts(self._texts(turn_id))
+                end_ms = ev.get("end_ms")
+                if end_ms is not None:
+                    self.last_end_ms = max(self.last_end_ms or 0, int(end_ms))
+                return ev
+
+            if kind == "llm_confirmed" and utt_id is not None:
+                # 不回填新 utt 的归属；未知 utt 退到当前 turn，绝不崩溃
+                turn_id = self.utt_turn.get(utt_id)
+                if turn_id is None:
+                    turn_id = self._current_turn
+                if turn_id is None:
+                    turn_id = self._new_turn()
+                self.turn_texts[turn_id][utt_id] = ev.get("polished_text") or ""
+                ev["turn_id"] = turn_id
+                ev["turn_polished_text"] = join_texts(self._texts(turn_id))
+                return ev
+
             return ev
-
-        if kind == "asr_final" and utt_id is not None:
-            turn_id = self._turn_for(ev)
-            self.turn_texts[turn_id][utt_id] = ev.get("raw_text") or ""
-            ev["turn_id"] = turn_id
-            ev["turn_text"] = join_texts(self._texts(turn_id))
-            end_ms = ev.get("end_ms")
-            if end_ms is not None:
-                self.last_end_ms = max(self.last_end_ms or 0, int(end_ms))
-            return ev
-
-        if kind == "llm_confirmed" and utt_id is not None:
-            # 不回填新 utt 的归属；未知 utt 退到当前 turn，绝不崩溃
-            turn_id = self.utt_turn.get(utt_id)
-            if turn_id is None:
-                turn_id = self._current_turn
-            if turn_id is None:
-                turn_id = self._new_turn()
-            self.turn_texts[turn_id][utt_id] = ev.get("polished_text") or ""
-            ev["turn_id"] = turn_id
-            ev["turn_polished_text"] = join_texts(self._texts(turn_id))
-            return ev
-
-        return ev

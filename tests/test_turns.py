@@ -195,3 +195,34 @@ def test_tracker_unknown_event_is_returned_unchanged():
 
     assert tracker.assign(ev) is ev
     assert "turn_id" not in ev
+
+
+def test_stream_turn_tracker_is_thread_safe():
+    import threading
+
+    tracker = StreamTurnTracker(gap_ms=2000)
+    errors = []
+
+    def feed(start):
+        try:
+            for i in range(200):
+                tracker.assign({
+                    "t": "asr_final", "utt_id": f"u_{start}_{i}",
+                    "start_ms": start + i * 1000, "end_ms": start + i * 1000 + 500,
+                    "raw_text": "你好",
+                })
+                tracker.assign({
+                    "t": "llm_confirmed", "utt_id": f"u_{start}_{i}",
+                    "start_ms": start + i * 1000, "end_ms": start + i * 1000 + 500,
+                    "polished_text": "你好。",
+                })
+        except Exception as exc:  # noqa: BLE001
+            errors.append(exc)
+
+    threads = [threading.Thread(target=feed, args=(n * 100000,)) for n in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert errors == []
