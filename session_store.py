@@ -23,6 +23,9 @@ SCHEMA_VERSION = 1
 
 UTTERANCE_KEYS = ("utt_id", "start_ms", "end_ms", "raw_text")
 
+# 进程内替换锁：不同 SessionStore 实例可能并发写同一目录（Windows 下 replace 需串行）
+_REPLACE_LOCK = threading.Lock()
+
 
 def new_session_dir(root: Path, when: Optional[datetime] = None) -> Path:
     """创建 output/sessions/s_YYYYMMDD_HHMMSS（重名时追加 _1、_2…）。"""
@@ -39,9 +42,12 @@ def new_session_dir(root: Path, when: Optional[datetime] = None) -> Path:
 
 
 def _atomic_write_json(path: Path, obj: Any) -> None:
-    tmp = path.with_name(path.name + ".tmp")
+    # 临时文件名带上进程号与线程号，避免多个 SessionStore 实例共享同一临时路径
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     tmp.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(tmp, path)
+    # Windows 下并发 replace 同一目标会抛 WinError 5，进程内串行化替换
+    with _REPLACE_LOCK:
+        os.replace(tmp, path)
 
 
 def _append_ndjson(path: Path, obj: Any) -> None:

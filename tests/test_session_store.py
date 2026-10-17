@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import threading
 from datetime import datetime
 
 from session_store import SessionStore, new_session_dir
@@ -90,3 +91,29 @@ def test_new_session_dir_collision(tmp_path):
 
     assert first.name == "s_20261017_143200"
     assert second.name == "s_20261017_143200_1"
+
+
+def test_concurrent_builds_from_two_instances_do_not_raise(tmp_path):
+    store_a = SessionStore(tmp_path / "s_1")
+    store_a.write_transcript([_utterance()], duration_ms=1000)
+    store_b = SessionStore(tmp_path / "s_1")
+
+    errors = []
+
+    def _run(store):
+        try:
+            for _ in range(20):
+                store.build_session_json()
+        except Exception as exc:  # 收集异常，线程内不能直接断言
+            errors.append(exc)
+
+    threads = [
+        threading.Thread(target=_run, args=(store_a,)),
+        threading.Thread(target=_run, args=(store_b,)),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert errors == []
