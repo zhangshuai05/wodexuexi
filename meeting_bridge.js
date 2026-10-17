@@ -184,6 +184,11 @@
         return;
       }
       emitFatal(String(err));
+    }).finally(function () {
+      // 请求结束后清空，onEnd 才能判断“是否有会议在跑”
+      if (controller === current) {
+        controller = null;
+      }
     });
   };
 
@@ -203,6 +208,25 @@
   // 结束会议：让服务端停止喂流，随即走正常收尾与回填（回放/麦克风共用）。
   if (typeof window.MeetingUI.onEnd !== "function") {
     window.MeetingUI.onEnd = function () {
+      // 没有在途会议：页面已在调用前禁用按钮，这里恢复并说明，避免卡死
+      if (!controller) {
+        var endButton = document.getElementById("end-meeting");
+        if (endButton) {
+          endButton.disabled = false;
+        }
+        var hint = document.getElementById("transcript-hint");
+        if (hint) {
+          hint.textContent = "当前没有进行中的会议";
+        }
+        if (typeof window.MeetingUI.handleEvent === "function") {
+          window.MeetingUI.handleEvent({
+            t: "error",
+            msg: "当前没有进行中的会议",
+            fatal: false
+          });
+        }
+        return;
+      }
       if (typeof window.MeetingUI.handleEvent === "function") {
         window.MeetingUI.handleEvent({
           t: "error",

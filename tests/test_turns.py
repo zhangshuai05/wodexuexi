@@ -31,6 +31,8 @@ def test_join_texts_adds_comma_between_cjk_fragments():
     # 已有标点的边界不再补
     assert join_texts(["你好，", "世界。"]) == "你好，世界。"
     assert join_texts(["  你好 ", "", "世界 "]) == "你好，世界"
+    # 下一片段自带标点时不得重复补
+    assert join_texts(["你好", "，世界"]) == "你好，世界"
 
 
 def test_join_texts_single_space_between_ascii():
