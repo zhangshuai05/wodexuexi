@@ -66,6 +66,7 @@ def build_turns(
                 draft["end_ms"] = max(draft["end_ms"], end_ms)
                 draft["parts"].append(text)
                 draft["utterance_ids"].append(utt["utt_id"])
+                draft["group"].append(utt)
                 continue
 
         drafts.append({
@@ -75,10 +76,12 @@ def build_turns(
             "end_ms": end_ms,
             "parts": [text],
             "utterance_ids": [utt["utt_id"]],
+            "group": [utt],
         })
 
     turns: List[Dict] = []
     for index, draft in enumerate(drafts, start=1):
+        group = draft["group"]
         turns.append({
             "turn_id": f"turn_{index:04d}",
             "spk": draft["spk"],
@@ -87,6 +90,8 @@ def build_turns(
             "end_ms": draft["end_ms"],
             "text": join_texts(draft["parts"]),
             "utterance_ids": draft["utterance_ids"],
+            "corrected": any(bool(u.get("corrected")) for u in group),
+            "bypassed": bool(group) and all(bool(u.get("bypassed")) for u in group),
         })
     return turns
 

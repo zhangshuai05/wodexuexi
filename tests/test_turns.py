@@ -9,7 +9,8 @@ from turns import (
 )
 
 
-def _utt(uid, start, end, text, spk_label=None, spk=None, polished=None):
+def _utt(uid, start, end, text, spk_label=None, spk=None, polished=None,
+         corrected=False, bypassed=False):
     return {
         "utt_id": uid,
         "start_ms": start,
@@ -18,6 +19,8 @@ def _utt(uid, start, end, text, spk_label=None, spk=None, polished=None):
         "polished_text": text if polished is None else polished,
         "spk": spk,
         "spk_label": spk_label,
+        "corrected": corrected,
+        "bypassed": bypassed,
     }
 
 
@@ -136,6 +139,33 @@ def test_build_turns_prefers_polished_text():
 
 def test_build_turns_empty_input():
     assert build_turns([]) == []
+
+
+def test_build_turns_propagates_corrected_and_bypassed_flags():
+    utts = [
+        # 同一说话人、间隔足够小 -> 合并为一个 turn
+        _utt("utt_0001", 0, 1000, "一", spk_label="speaker_0", spk=0,
+             corrected=True, bypassed=False),
+        _utt("utt_0002", 1500, 2500, "二", spk_label="speaker_0", spk=0,
+             corrected=False, bypassed=False),
+        _utt("utt_0003", 3000, 4000, "三", spk_label="speaker_0", spk=0,
+             corrected=False, bypassed=True),
+        # 间隔 9000ms >= 8000ms -> 新 turn；组内全部 bypassed
+        _utt("utt_0004", 13000, 14000, "四", spk_label="speaker_0", spk=0,
+             corrected=False, bypassed=True),
+        _utt("utt_0005", 14500, 15000, "五", spk_label="speaker_0", spk=0,
+             corrected=False, bypassed=True),
+    ]
+
+    turns = build_turns(utts)
+
+    assert len(turns) == 2
+    # 任一句被修正 -> corrected=True；并非全部 bypass -> bypassed=False
+    assert turns[0]["corrected"] is True
+    assert turns[0]["bypassed"] is False
+    # 全组都是短句 bypass -> bypassed=True；无修正 -> corrected=False
+    assert turns[1]["corrected"] is False
+    assert turns[1]["bypassed"] is True
 
 
 # ---- StreamTurnTracker ----

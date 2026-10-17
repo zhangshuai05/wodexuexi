@@ -74,8 +74,8 @@
           end_ms: turn.end_ms,
           raw_text: turn.text,
           polished_text: turn.text,
-          corrected: false,
-          bypassed: false,
+          corrected: !!turn.corrected,
+          bypassed: !!turn.bypassed,
           error: null
         });
         mapping[turn.turn_id] = {
