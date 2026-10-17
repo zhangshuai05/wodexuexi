@@ -196,8 +196,8 @@ D:\Deepseek\
 
 - 有 `spk_label`：相邻且标签相同、且 `start_ms - 上一句 end_ms < 8000`（`FINAL_TURN_SPLIT_MS`）才合并；
   长静音处同一说话人也断开。
-- 全部 `spk_label` 为 `null`（`--no-diar`）：只按 `STREAM_TURN_GAP_MS = 10000` 的间隔合并，
-  （2026-10-18 调整：流式阶段只有 ≥10 秒长停顿才换段；回填完成前前端隐藏说话人侧栏，
+- 全部 `spk_label` 为 `null`（`--no-diar`）：只按 `STREAM_TURN_GAP_MS = 5000` 的间隔合并，
+  （2026-10-18 调整：流式阶段只有 ≥5 秒长停顿才换段；回填完成前前端隐藏说话人侧栏，
   不得退化成整场一个 turn。
 
 ---

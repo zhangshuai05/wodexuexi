@@ -9,7 +9,7 @@ from __future__ import annotations
 import threading
 from typing import Dict, List, Optional
 
-STREAM_TURN_GAP_MS = 10000   # 流式显示：只有长停顿才换段，避免说话人未知时切得太碎
+STREAM_TURN_GAP_MS = 5000    # 流式显示：只有长停顿才换段，避免说话人未知时切得太碎
 FINAL_TURN_SPLIT_MS = 8000   # 最终合并：同一说话人也要在长静音处断开
 
 # 中文标点与汉字一样不插空格；其余字符（英文、数字等）之间补一个空格
