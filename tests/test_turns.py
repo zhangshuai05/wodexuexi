@@ -87,9 +87,9 @@ def test_build_turns_split_gap_is_strict():
 def test_build_turns_without_labels_uses_stream_gap():
     utts = [
         _utt("utt_0001", 0, 1000, "一"),
-        _utt("utt_0002", 2500, 3500, "二"),     # 间隔 1500 < 2000 -> 合并
-        _utt("utt_0003", 5600, 6600, "三"),     # 间隔 2100 >= 2000 -> 断开
-        _utt("utt_0004", 7000, 8000, "四"),     # 间隔 400 -> 合并
+        _utt("utt_0002", 2500, 3500, "二"),       # 间隔 1500 < 10000 -> 合并
+        _utt("utt_0003", 13500, 14500, "三"),     # 间隔 10000 >= 10000 -> 断开
+        _utt("utt_0004", 14900, 15900, "四"),     # 间隔 400 -> 合并
     ]
 
     turns = build_turns(utts)
@@ -106,7 +106,7 @@ def test_build_turns_without_labels_uses_stream_gap():
 def test_build_turns_gap_threshold_matches_stream_constant():
     utts = [
         _utt("utt_0001", 0, 1000, "一"),
-        _utt("utt_0002", 1000 + STREAM_TURN_GAP_MS, 5000, "二"),
+        _utt("utt_0002", 1000 + STREAM_TURN_GAP_MS, 13000, "二"),
     ]
 
     assert len(build_turns(utts)) == 2
@@ -204,7 +204,7 @@ def test_tracker_starts_new_turn_after_gap():
     assert merged["turn_text"] == "一，二"
 
     split = tracker.assign({"t": "asr_final", "utt_id": "utt_0003",
-                            "start_ms": 6000, "end_ms": 7000, "raw_text": "三"})
+                            "start_ms": 14000, "end_ms": 15000, "raw_text": "三"})
     assert split["turn_id"] == "turn_0002"
     assert split["turn_text"] == "三"
 

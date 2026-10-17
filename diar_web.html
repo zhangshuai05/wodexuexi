@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>会议实时记录</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202a26;
+      --muted: #758078;
+      --line: #e2e8e3;
+      --paper: #f8f9f7;
+      --surface: #fff;
+      --accent: #466b5a;
+      --accent-hover: #365744;
+      --accent-soft: #edf4ef;
+      --pending: #8f6839;
+      --error: #a34c45;
+      font-family: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--paper); color: var(--ink); }
+    button, input { font: inherit; }
+    .shell { width: min(100% - 48px, 1080px); margin: 0 auto; padding: 34px 0 48px; }
+
+    .page-header, .action-row, .audio-row, .transcript-heading, .utterance-meta, .backfill-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .page-header { padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+    h1 { margin: 0; font-size: clamp(25px, 3vw, 32px); font-weight: 650; letter-spacing: -.035em; line-height: 1.2; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .state-tag {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .state-dot { width: 7px; height: 7px; border-radius: 50%; background: #99a39c; }
+    .state-tag.is-live { color: var(--accent); }
+    .state-tag.is-live .state-dot { background: #73a288; }
+    .state-tag.is-done .state-dot { background: #8b9690; }
+    .state-tag.is-error { color: var(--error); }
+    .state-tag.is-error .state-dot { background: var(--error); }
+
+    .action-row { justify-content: flex-start; gap: 9px; padding: 18px 0 14px; }
+    .button {
+      min-height: 38px;
+      padding: 0 15px;
+      border: 1px solid #d6ded8;
+      border-radius: 6px;
+      background: var(--surface);
+      color: #43534a;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background .14s ease, border-color .14s ease;
+    }
+    .button:hover { border-color: #b8c8bd; background: #f5f8f5; }
+    .button:focus-visible { outline: 3px solid rgba(70,107,90,.2); outline-offset: 2px; }
+    .button-primary { border-color: var(--accent); background: var(--accent); color: white; }
+    .button-primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
+    .button-danger { color: #79524d; }
+    .button:disabled { cursor: default; opacity: .48; }
+
+    .audio-sim {
+      display: grid;
+      grid-template-columns: 125px minmax(0, 1fr);
+      align-items: center;
+      gap: 14px;
+      min-height: 56px;
+      margin-bottom: 18px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: rgba(255,255,255,.66);
+    }
+    .audio-title { color: #526158; font-size: 11px; font-weight: 650; }
+    .audio-caption { display: block; margin-top: 3px; color: #8a958e; font-size: 9px; font-weight: 400; }
+    .audio-row { justify-content: flex-start; min-width: 0; gap: 10px; }
+    .file-button {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid #dce3dd;
+      border-radius: 5px;
+      background: white;
+      color: #526158;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 550;
+    }
+    .file-button:hover { border-color: #bac9bf; }
+    .file-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
+    .file-button:focus-within { outline: 3px solid rgba(70,107,90,.2); outline-offset: 2px; }
+    .file-name { min-width: 0; overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .simulate-button { min-height: 30px; margin-left: auto; padding: 0 10px; font-size: 10px; }
+
+    /* Intrinsic page flow: transcript height is content-driven, with no inner scroll area or height transition. */
+    .transcript-panel {
+      min-height: 420px;
+      padding: 0 24px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .transcript-heading { min-height: 55px; border-bottom: 1px solid var(--line); }
+    .transcript-heading h2 { margin: 0; font-size: 13px; font-weight: 650; }
+    .utterance-count { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .transcript-list { min-height: 320px; overflow: visible; }
+    .empty-state {
+      display: grid;
+      min-height: 300px;
+      align-content: center;
+      justify-items: center;
+      color: var(--muted);
+      text-align: center;
+    }
+    .empty-state strong { margin-bottom: 6px; color: #536158; font-size: 13px; font-weight: 600; }
+    .empty-state span { max-width: 370px; font-size: 11px; line-height: 1.7; }
+    .utterance {
+      display: grid;
+      grid-template-columns: 116px minmax(0, 1fr);
+      gap: 18px;
+      padding: 19px 0;
+      border-bottom: 1px solid #edf0ed;
+      animation: arrive .14s ease-out both;
+    }
+    .utterance:last-child { border-bottom: 0; }
+    /* 说话人未回填前隐藏侧栏（“待识别”与内部 id），直播时看起来是普通转写 */
+    body:not(.is-diarized) .utterance { grid-template-columns: minmax(0, 1fr); }
+    body:not(.is-diarized) .utt-side { display: none; }
+    .utt-side { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding-top: 3px; }
+    .speaker-slot { min-height: 20px; }
+    .speaker-placeholder { color: #89958e; font-size: 10px; }
+    .spk-badge { display: inline-block; padding: 3px 7px; border-radius: 4px; color: white; font-size: 10px; font-weight: 600; }
+    .utt-id { color: #a0aaa4; font-family: ui-monospace, "Cascadia Code", monospace; font-size: 9px; }
+    .utt-main { min-width: 0; }
+    .utterance-meta { align-items: baseline; margin-bottom: 7px; }
+    .utt-time { color: #89948e; font-family: ui-monospace, "Cascadia Code", monospace; font-size: 10px; font-variant-numeric: tabular-nums; }
+    .utt-state { color: #838f88; font-size: 10px; white-space: nowrap; }
+    .utt-state.is-pending { color: var(--pending); }
+    .utt-state.is-confirmed { color: var(--accent); }
+    .utt-text {
+      margin: 0;
+      overflow-wrap: anywhere;
+      font-size: 15px;
+      line-height: 1.85;
+      white-space: normal;
+    }
+    .draft-italic { color: #7b8881; font-style: italic; }
+    .confirmed-normal { color: #25322c; font-style: normal; font-weight: 450; }
+    .utt-text.is-typing::after {
+      display: inline-block;
+      width: 1px;
+      height: 15px;
+      margin-left: 4px;
+      background: var(--accent);
+      content: "";
+      vertical-align: -2px;
+      animation: blink 1.1s steps(2, start) infinite;
+    }
+    .transcript-footer { min-height: 40px; padding: 12px 0; border-top: 1px solid #edf0ed; color: var(--muted); font-size: 10px; }
+    .backfill { padding: 15px 0 17px; border-top: 1px solid var(--line); }
+    .backfill[hidden] { display: none; }
+    .backfill-heading { gap: 10px; color: #536158; font-size: 11px; }
+    .progress-value { color: var(--accent); font-family: ui-monospace, "Cascadia Code", monospace; font-size: 10px; font-weight: 600; }
+    .progress-track { height: 3px; margin: 9px 0 7px; background: #e8ede9; }
+    .progress-fill { width: 0; height: 100%; background: var(--accent); transition: width .16s linear; }
+    .progress-status { margin: 0; color: var(--muted); font-size: 10px; }
+    .notice { display: none; margin: 11px 0; padding: 9px 10px; border-radius: 5px; background: #f8f2e9; color: var(--pending); font-size: 10px; line-height: 1.6; }
+    .notice.is-visible { display: block; }
+    .notice.is-error { background: #fbefee; color: var(--error); }
+
+    @keyframes arrive { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes blink { to { visibility: hidden; } }
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 28px, 1080px); padding-top: 20px; }
+      .page-header { align-items: flex-start; flex-direction: column; gap: 11px; padding-bottom: 17px; }
+      .action-row { gap: 7px; padding: 14px 0 11px; }
+      .button { flex: 1 1 0; padding: 0 8px; font-size: 11px; }
+      .audio-sim { grid-template-columns: 1fr; gap: 8px; padding: 10px; }
+      .audio-caption { display: inline; margin-left: 5px; }
+      .audio-row { gap: 7px; }
+      .file-name { font-size: 9px; }
+      .transcript-panel { min-height: 360px; padding: 0 14px; }
+      .transcript-list { min-height: 270px; }
+      .empty-state { min-height: 250px; }
+      .utterance { grid-template-columns: 78px minmax(0, 1fr); gap: 10px; padding: 16px 0; }
+      .utt-text { font-size: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="page-header">
+      <div>
+        <h1>实时会议记录</h1>
+        <p class="subtitle">语音实时成稿，句尾自动校正，会后补全说话人。</p>
+      </div>
+      <span class="state-tag" id="session-state"><i class="state-dot"></i><span id="state-text">准备就绪</span></span>
+    </header>
+
+    <nav class="action-row" aria-label="会议控制">
+      <button class="button button-primary" id="start-meeting" type="button">开始会议</button>
+      <button class="button" id="reset-session" type="button">重置</button>
+      <button class="button button-danger" id="end-meeting" type="button">结束会议</button>
+    </nav>
+
+    <section class="audio-sim" aria-label="音频模拟">
+      <div class="audio-title">音频模拟<span class="audio-caption">用本地音频代替麦克风输入</span></div>
+      <div class="audio-row">
+        <label class="file-button">
+          选择音频
+          <input id="audio-file" type="file" accept="audio/*">
+        </label>
+        <span class="file-name" id="audio-name">尚未选择文件</span>
+        <button class="button simulate-button" id="simulate-audio" type="button" disabled>开始模拟</button>
+      </div>
+    </section>
+
+    <section class="transcript-panel" aria-labelledby="transcript-title">
+      <header class="transcript-heading">
+        <h2 id="transcript-title">转写内容</h2>
+        <span class="utterance-count"><span id="utterance-count">0</span> 段</span>
+      </header>
+      <div class="transcript-list" id="transcript-list" aria-live="polite">
+        <div class="empty-state" id="empty-state">
+          <strong>等待语音输入</strong>
+          <span>点击“开始会议”接入麦克风，或选择音频文件进行模拟。字幕会在这里持续展开。</span>
+        </div>
+      </div>
+      <footer class="transcript-footer" id="transcript-hint">会议尚未开始</footer>
+      <section class="backfill" id="backfill" hidden aria-label="说话人回填进度">
+        <div class="backfill-heading">
+          <span id="progress-copy">说话人回填</span>
+          <span class="progress-value" id="progress-value">等待中</span>
+        </div>
+        <div class="progress-track" id="progress-track" role="progressbar" aria-label="说话人回填进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="progress-status" id="progress-status">按整段录音识别说话人。</p>
+      </section>
+      <div class="notice" id="notice" role="status"></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var transcript = document.getElementById("transcript-list");
+      var rows = new Map();
+      var currentUttId = null;
+      var speakerColors = ["#466b5a", "#677681", "#77715d", "#5c746a"];
+
+      function pad(value) { return String(value).padStart(2, "0"); }
+      function formatTime(ms) {
+        var seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+        return pad(Math.floor(seconds / 60)) + ":" + pad(seconds % 60);
+      }
+      function formatRange(start, end) {
+        if (typeof start !== "number") return "未开始";
+        return formatTime(start) + (typeof end === "number" ? " 至 " + formatTime(end) : " 至 实时");
+      }
+      function setStatus(text, kind) {
+        var badge = document.getElementById("session-state");
+        badge.classList.remove("is-live", "is-done", "is-error");
+        if (kind) badge.classList.add("is-" + kind);
+        document.getElementById("state-text").textContent = text;
+      }
+      function showNotice(message, isError) {
+        var notice = document.getElementById("notice");
+        notice.textContent = message;
+        notice.classList.add("is-visible");
+        notice.classList.toggle("is-error", !!isError);
+      }
+      function clearNotice() {
+        var notice = document.getElementById("notice");
+        notice.textContent = "";
+        notice.className = "notice";
+      }
+      function clearEmptyState() {
+        var empty = document.getElementById("empty-state");
+        if (empty) empty.remove();
+      }
+      function makeRow(event) {
+        clearEmptyState();
+        var article = document.createElement("article");
+        article.className = "utterance";
+        article.dataset.uttId = event.utt_id;
+
+        var side = document.createElement("div");
+        side.className = "utt-side";
+        var speakerSlot = document.createElement("div");
+        speakerSlot.className = "speaker-slot";
+        var placeholder = document.createElement("span");
+        placeholder.className = "speaker-placeholder";
+        placeholder.textContent = "待识别";
+        speakerSlot.appendChild(placeholder);
+        var id = document.createElement("span");
+        id.className = "utt-id";
+        id.textContent = event.utt_id;
+        side.append(speakerSlot, id);
+
+        var main = document.createElement("div");
+        main.className = "utt-main";
+        var meta = document.createElement("div");
+        meta.className = "utterance-meta";
+        var time = document.createElement("time");
+        time.className = "utt-time";
+        var state = document.createElement("span");
+        state.className = "utt-state";
+        meta.append(time, state);
+        var text = document.createElement("p");
+        text.className = "utt-text";
+        main.append(meta, text);
+        article.append(side, main);
+        transcript.appendChild(article);
+
+        var row = { speakerSlot: speakerSlot, time: time, state: state, text: text };
+        rows.set(event.utt_id, row);
+        document.getElementById("utterance-count").textContent = String(rows.size);
+        return row;
+      }
+      function getRow(event) { return rows.get(event.utt_id) || makeRow(event); }
+      function setText(row, value, style, typing) {
+        row.text.textContent = value || "";
+        row.text.classList.remove("draft-italic", "confirmed-normal", "is-typing");
+        if (style) row.text.classList.add(style);
+        if (typing) row.text.classList.add("is-typing");
+      }
+      function applyMapping(mapping) {
+        if (!mapping) return;
+        Object.keys(mapping).forEach(function (uttId) {
+          var row = rows.get(uttId);
+          var value = mapping[uttId];
+          if (!row || !value || value.spk === null || typeof value.spk === "undefined") return;
+          var label = value.spk_label || ("speaker_" + value.spk);
+          var badge = document.createElement("span");
+          badge.className = "spk-badge";
+          badge.textContent = label;
+          badge.style.backgroundColor = speakerColors[Math.abs(Number(value.spk)) % speakerColors.length];
+          row.speakerSlot.replaceChildren(badge);
+          row.speaker = Number(value.spk);
+        });
+      }
+
+      function handleEvent(event) {
+        if (!event || typeof event.t !== "string") return;
+        var row;
+        if (event.t === "asr_partial") {
+          row = getRow(event);
+          currentUttId = event.utt_id;
+          row.time.dataset.start = String(event.start_ms || 0);
+          row.time.textContent = formatRange(event.start_ms, null);
+          row.state.className = "utt-state";
+          row.state.textContent = "正在识别";
+          setText(row, event.text || "", "draft-italic", true);
+          document.getElementById("transcript-hint").textContent = "正在接收语音，字幕会随识别结果展开";
+        } else if (event.t === "asr_final") {
+          row = getRow(event);
+          row.time.dataset.start = String(event.start_ms || 0);
+          row.time.dataset.end = String(event.end_ms || 0);
+          row.time.textContent = formatRange(event.start_ms, event.end_ms);
+          row.state.className = "utt-state is-pending";
+          row.state.textContent = "润色中";
+          setText(row, event.raw_text || "", "draft-italic", false);
+          document.getElementById("transcript-hint").textContent = "句尾已确认，正在进行异步校正";
+        } else if (event.t === "llm_confirmed") {
+          row = getRow(event);
+          row.time.textContent = formatRange(event.start_ms, event.end_ms);
+          row.state.className = "utt-state is-confirmed";
+          row.state.textContent = event.corrected ? "已校正" : (event.bypassed ? "短句略过" : "原文保留");
+          setText(row, event.polished_text || event.raw_text || "", "confirmed-normal", false);
+          if (currentUttId === event.utt_id) {
+            currentUttId = null;
+          }
+          document.getElementById("transcript-hint").textContent = "校正完成，字幕已固化";
+        } else if (event.t === "progress") {
+          var backfill = document.getElementById("backfill");
+          backfill.hidden = false;
+          var total = Math.max(0, Number(event.total) || 0);
+          var done = Math.max(0, Math.min(total || Number(event.done) || 0, Number(event.done) || 0));
+          var percent = total ? Math.round(done / total * 100) : 0;
+          document.getElementById("progress-copy").textContent = event.msg || "正在回填说话人";
+          document.getElementById("progress-value").textContent = total ? done + " / " + total : percent + "%";
+          document.getElementById("progress-fill").style.width = percent + "%";
+          document.getElementById("progress-track").setAttribute("aria-valuenow", String(percent));
+          document.getElementById("progress-status").textContent = event.stage || "说话人回填中";
+          document.getElementById("transcript-hint").textContent = "正在进行全局说话人回填";
+        } else if (event.t === "speaker_diarized") {
+          document.getElementById("backfill").hidden = false;
+          applyMapping(event.mapping);
+          document.getElementById("progress-copy").textContent = "说话人回填完成";
+          document.getElementById("progress-value").textContent = "已完成";
+          document.getElementById("progress-fill").style.width = "100%";
+          document.getElementById("progress-track").setAttribute("aria-valuenow", "100");
+          document.getElementById("progress-status").textContent = (event.n_clusters || "完成") + " 位说话人";
+        } else if (event.t === "error") {
+          showNotice(event.msg || "处理过程中发生错误", !!event.fatal);
+          if (event.fatal) setStatus("处理失败", "error");
+        } else if (event.t === "finish") {
+          setStatus("会议已完成", "done");
+          document.getElementById("transcript-hint").textContent = "会议处理完成";
+          document.getElementById("start-meeting").disabled = true;
+          document.getElementById("end-meeting").disabled = true;
+          document.getElementById("simulate-audio").disabled = true;
+        }
+      }
+
+      function resetSession() {
+        rows.clear();
+        currentUttId = null;
+        transcript.replaceChildren();
+        document.getElementById("utterance-count").textContent = "0";
+        document.getElementById("transcript-hint").textContent = "会议尚未开始";
+        document.getElementById("backfill").hidden = true;
+        document.getElementById("progress-copy").textContent = "说话人回填";
+        document.getElementById("progress-value").textContent = "等待中";
+        document.getElementById("progress-fill").style.width = "0";
+        document.getElementById("progress-track").setAttribute("aria-valuenow", "0");
+        document.getElementById("progress-status").textContent = "按整段录音识别说话人。";
+        document.getElementById("start-meeting").disabled = false;
+        document.getElementById("end-meeting").disabled = false;
+        document.getElementById("audio-file").value = "";
+        document.getElementById("audio-name").textContent = "尚未选择文件";
+        document.getElementById("simulate-audio").disabled = true;
+        clearNotice();
+        setStatus("准备就绪", "");
+        var empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.id = "empty-state";
+        var title = document.createElement("strong");
+        title.textContent = "等待语音输入";
+        var detail = document.createElement("span");
+        detail.textContent = "点击“开始会议”接入麦克风，或选择音频文件进行模拟。字幕会在这里持续展开。";
+        empty.append(title, detail);
+        transcript.appendChild(empty);
+        if (typeof window.MeetingUI.onReset === "function") window.MeetingUI.onReset();
+      }
+
+      function startMeeting() {
+        clearNotice();
+        if (typeof window.MeetingUI.onStart === "function") {
+          setStatus("会议进行中", "live");
+          document.getElementById("transcript-hint").textContent = "麦克风已启动，等待转写内容";
+          document.getElementById("start-meeting").disabled = true;
+          document.getElementById("simulate-audio").disabled = true;
+          window.MeetingUI.onStart();
+        } else {
+          setStatus("等待麦克风接入", "");
+          document.getElementById("transcript-hint").textContent = "麦克风接入口已预留，接入后这里会实时显示转写";
+        }
+      }
+
+      function endMeeting() {
+        clearNotice();
+        if (typeof window.MeetingUI.onEnd === "function") {
+          document.getElementById("transcript-hint").textContent = "正在结束会议";
+          document.getElementById("end-meeting").disabled = true;
+          window.MeetingUI.onEnd();
+        } else {
+          setStatus("等待回填服务", "done");
+          document.getElementById("transcript-hint").textContent = "结束会议按钮已预留，接入服务后将启动离线说话人回填";
+          document.getElementById("start-meeting").disabled = true;
+          document.getElementById("end-meeting").disabled = true;
+          document.getElementById("simulate-audio").disabled = true;
+        }
+      }
+
+      document.getElementById("start-meeting").addEventListener("click", startMeeting);
+      document.getElementById("reset-session").addEventListener("click", resetSession);
+      document.getElementById("end-meeting").addEventListener("click", endMeeting);
+      document.getElementById("audio-file").addEventListener("change", function (event) {
+        var file = event.target.files && event.target.files[0];
+        document.getElementById("audio-name").textContent = file ? file.name : "尚未选择文件";
+        document.getElementById("simulate-audio").disabled = !file;
+        clearNotice();
+      });
+      document.getElementById("simulate-audio").addEventListener("click", function () {
+        var file = document.getElementById("audio-file").files[0];
+        if (!file) return;
+        if (typeof window.MeetingUI.onAudioSimulation === "function") {
+          setStatus("音频模拟中", "live");
+          document.getElementById("transcript-hint").textContent = "正在使用所选音频模拟会议";
+          document.getElementById("start-meeting").disabled = true;
+          document.getElementById("simulate-audio").disabled = true;
+          window.MeetingUI.onAudioSimulation(file);
+        } else {
+          showNotice("音频模拟接口已预留，接入服务后即可把所选文件送入流式流程。", false);
+        }
+      });
+
+      window.MeetingUI = {
+        handleEvent: handleEvent,
+        reset: resetSession,
+        onStart: null,
+        onEnd: null,
+        onReset: null,
+        onAudioSimulation: null
+      };
+
+    })();
+  </script>
+</body>
+</html>

@@ -59,6 +59,8 @@
       if (typeof ui.reset === "function") {
         ui.reset();
       }
+      // reset 会移除标记，这里重新加回，最终视图才显示说话人侧栏
+      document.body.classList.add("is-diarized");
       var mapping = {};
       for (var i = 0; i < event.turns.length; i += 1) {
         var turn = event.turns[i];
@@ -111,6 +113,10 @@
       return;
     }
     if (typeof window.MeetingUI.handleEvent === "function") {
+      // 回填完成：页面从此显示说话人侧栏
+      if (event.t === "speaker_diarized") {
+        document.body.classList.add("is-diarized");
+      }
       if (event.t === "speaker_diarized" &&
           Array.isArray(event.turns) && event.turns.length > 0) {
         renderTurns(event);
@@ -198,6 +204,8 @@
       if (rendering) {
         return;
       }
+      // 新一轮开始：回到“未回填”视图，隐藏说话人侧栏
+      document.body.classList.remove("is-diarized");
       if (controller) {
         controller.abort();
         controller = null;
