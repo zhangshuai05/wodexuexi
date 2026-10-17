@@ -255,6 +255,30 @@ def test_chunk_ms_must_be_positive(tmp_path):
         list(run_offline.iter_audio_chunks(wav, 0))
 
 
+def test_on_event_receives_pipeline_events(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+    session_dir = tmp_path / "s_hooks"
+    seen = []
+
+    run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True,
+        session_factory=lambda p, m: FakeSession(p),
+        polisher_factory=FakePolisher,
+        backfill_fn=lambda wav_path, utts, models, mode: {"utt_0001": "Speaker_1"},
+        models={},
+        on_event=seen.append,
+    )
+
+    kinds = [ev["t"] for ev in seen]
+    assert "asr_partial" in kinds
+    assert "asr_final" in kinds
+    assert "llm_confirmed" in kinds
+    assert kinds.index("asr_final") < kinds.index("llm_confirmed"), (
+        "同句 llm_confirmed 必须晚于 asr_final"
+    )
+
+
 def test_backfill_failure_still_closes_polisher(tmp_path):
     wav = tmp_path / "in.wav"
     _write_wav(wav)

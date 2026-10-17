@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
@@ -19,6 +20,26 @@ import bootstrap
 
 SAMPLE_RATE = 16000
 MAX_END_SILENCE_MS = 1000  # 2026-10-17 拍板：1000ms（450 会把 ASR 切成碎片）
+
+# 回填进度是“按已用时间推算”的假进度：上游 backfill_speakers 没有回调，且只读不改。
+PROGRESS_INTERVAL_S = 5.0
+PROGRESS_MIN_ESTIMATE_S = 60.0
+
+
+def _notify(callback: Optional[Callable[[Dict], None]], ev: Dict) -> None:
+    """回调隔离：HTTP 客户端断线/序列化失败不得杀死流水线。"""
+    if callback is None:
+        return
+    try:
+        callback(ev)
+    except Exception:
+        pass
+
+
+def _estimate_backfill_seconds(processed_ms: int) -> float:
+    """按已处理音频时长估算回填耗时：max(60s, 音频秒数 * 0.5 + 60s)。"""
+    duration_s = max(0.0, processed_ms / 1000.0)
+    return max(PROGRESS_MIN_ESTIMATE_S, duration_s * 0.5 + PROGRESS_MIN_ESTIMATE_S)
 
 
 def _validate_wav(wav_path) -> None:
@@ -72,6 +93,8 @@ def run(
     session_factory: Optional[Callable] = None,
     polisher_factory: Optional[Callable] = None,
     backfill_fn: Optional[Callable] = None,
+    on_event: Optional[Callable[[Dict], None]] = None,
+    on_progress: Optional[Callable[[Dict], None]] = None,
 ) -> Dict:
     _validate_wav(wav)
     bootstrap.install()
@@ -102,6 +125,8 @@ def run(
         # 每句完成即落盘：崩了也不丢已润色的部分
         store.write_polished(polished_buffer)
         store.build_session_json()
+        # 落盘之后再通知外部（HTTP 客户端断线由 _notify 吞掉）
+        _notify(on_event, ev)
 
     polisher = None
     if not no_llm:
@@ -113,10 +138,14 @@ def run(
         if ev.get("t") == "asr_final":
             store.append_utterance(ev)
             store.append_event(ev)
+            # 先发 asr_final 再 submit：FakePolisher/异常路径可能同步回调 llm_confirmed，
+            # 事件顺序必须保持 asr_final -> llm_confirmed。
+            _notify(on_event, ev)
             if polisher is not None:
                 polisher.submit(ev)
         else:
             store.append_event(ev)
+            _notify(on_event, ev)
 
     clock = time.monotonic()
     fed_seconds = 0.0
@@ -158,7 +187,52 @@ def run(
     try:
         if not no_diar:
             from diar_backfill import run_backfill
-            run_backfill(store.dir, models=models, backfill=backfill_fn)
+
+            # 回填进度只能按时间估算：上游没有进度回调。心跳线程发估算值，
+            # 结束前必须 stop + join，保证“完成”是最后一条 progress。
+            total = len(session.completed_utterances)
+            estimate_s = _estimate_backfill_seconds(session.processed_ms)
+            started_at = time.monotonic()
+            stop = threading.Event()
+
+            def emit_progress(elapsed: float) -> None:
+                done = 0 if total <= 0 else min(
+                    total - 1, max(0, int(total * elapsed / estimate_s))
+                )
+                _notify(on_progress, {
+                    "t": "progress",
+                    "stage": "diarization",
+                    "done": done,
+                    "total": total,
+                    "estimated": True,
+                    "msg": (f"说话人回填进行中（按时间估算，非真实进度）："
+                            f"已用 {elapsed:.0f}s / 预计 {estimate_s:.0f}s"),
+                })
+
+            def heartbeat() -> None:
+                while not stop.wait(PROGRESS_INTERVAL_S):
+                    emit_progress(time.monotonic() - started_at)
+
+            beat = None
+            if on_progress is not None and total > 0:
+                beat = threading.Thread(target=heartbeat, name="backfill-progress", daemon=True)
+                beat.start()
+                # 先给客户端一条 0 进度，避免开头 5 秒没有任何反馈
+                emit_progress(0.0)
+
+            try:
+                run_backfill(store.dir, models=models, backfill=backfill_fn)
+            finally:
+                stop.set()
+                if beat is not None:
+                    beat.join()
+            _notify(on_progress, {
+                "t": "progress",
+                "stage": "diarization",
+                "done": total,
+                "total": total,
+                "msg": "说话人回填完成",
+            })
     finally:
         if polisher is not None:
             # 收敛不变量：回填 -> close -> write_polished -> build_session_json 是最终合并顺序，
