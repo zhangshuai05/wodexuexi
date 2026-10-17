@@ -185,7 +185,7 @@ D:\Deepseek\
        │
        └──► 旁路2：【阶段 1：流式 VAD + 流式 Paraformer（600ms 步长）】
                      ├─► 说话进行中：持续抛 asr_partial ──► 前端【灰色斜体，实时跳动】
-                     └─► 检测到句尾停顿（450ms）或满 12s 换气：
+                     └─► 检测到句尾停顿（1000ms）或满 12s 换气：（2026-10-17 拍板：1000ms，由上游 .zhang/streaming_asr_engine.py 的默认值变更同步而来；本项目显式 pin）
                            1. 对 ASR 执行局部 Flush (is_final=True) 逼出尾字，清空 asr_cache
                            2. 锁死 utt_k 的 [start_ms, end_ms]，抛 asr_final
                            3. 主线程 0 等待，开启 utt_{k+1} 继续输出下一句斜体

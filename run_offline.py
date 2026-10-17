@@ -17,6 +17,7 @@ import bootstrap
 
 
 SAMPLE_RATE = 16000
+MAX_END_SILENCE_MS = 1000  # 2026-10-17 拍板：1000ms（450 会把 ASR 切成碎片）
 
 
 def iter_audio_chunks(
@@ -43,7 +44,8 @@ def _default_session(wav_path, models):
     from streaming_asr_engine import StreamingSession
     return StreamingSession(str(wav_path),
                             asr_model=models["stream_asr"],
-                            vad_model=models["vad"])
+                            vad_model=models["vad"],
+                            max_end_silence_time=MAX_END_SILENCE_MS)
 
 
 def run(

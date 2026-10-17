@@ -158,3 +158,23 @@ def test_zero_sample_wav_still_finalizes(tmp_path):
 
     assert obj["status"] == "transcript"
     assert obj["utterances"], "0 采样 WAV 也必须走一次 is_final 收尾"
+
+
+def test_default_session_pins_end_silence(monkeypatch):
+    import sys
+    import types
+
+    captured = {}
+
+    class FakeStreamingSession:
+        def __init__(self, wav_path, asr_model=None, vad_model=None,
+                     max_end_silence_time=None):
+            captured["max_end_silence_time"] = max_end_silence_time
+
+    fake = types.ModuleType("streaming_asr_engine")
+    fake.StreamingSession = FakeStreamingSession
+    monkeypatch.setitem(sys.modules, "streaming_asr_engine", fake)
+
+    run_offline._default_session("x.wav", {"stream_asr": None, "vad": None})
+
+    assert captured["max_end_silence_time"] == 1000, "断句阈值必须显式 pin，不能继承上游默认值"
