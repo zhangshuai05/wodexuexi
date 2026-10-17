@@ -2,6 +2,7 @@
 """stream_service HTTP 契约测试：假流水线 + 临时端口，不加载任何真实模型。"""
 import io
 import json
+import re
 import threading
 import urllib.error
 import urllib.request
@@ -88,6 +89,47 @@ def test_get_index_serves_html(live_server):
     status, body = _get(base + "/")
     assert status == 200
     assert "<title>会议实时记录" in body.decode("utf-8")
+
+
+def test_index_injects_bridge(live_server):
+    base, _ = live_server
+    status, body = _get(base + "/")
+    html = body.decode("utf-8")
+    assert status == 200
+    assert "meeting_bridge.js" in html
+    assert "<title>会议实时记录" in html
+
+
+def test_bridge_is_served(live_server):
+    base, _ = live_server
+    with urllib.request.urlopen(base + "/meeting_bridge.js", timeout=10) as response:
+        assert response.status == 200
+        assert "application/javascript" in response.headers.get("Content-Type", "")
+        assert "onAudioSimulation" in response.read().decode("utf-8")
+
+
+def test_bridge_does_not_override_existing_hooks():
+    bridge = Path(__file__).resolve().parent.parent / "meeting_bridge.js"
+    text = bridge.read_text(encoding="utf-8")
+    # 守卫：已有实现时提前返回，不覆盖其它代理接入的钩子
+    guard = re.search(
+        r"typeof\s+window\.MeetingUI\.onAudioSimulation\s*===\s*['\"]function['\"]",
+        text,
+    )
+    assert guard is not None, "桥接脚本缺少“已有实现则不覆盖”的守卫"
+
+
+def test_inject_bridge_is_idempotent():
+    html = b"<html><body>x</body></html>"
+    once = stream_service._inject_bridge(html)
+    assert once.count(b"meeting_bridge.js") == 1
+    assert b'<script src="/meeting_bridge.js"></script>\n</body>' in once
+    assert stream_service._inject_bridge(once) == once, "已有标记时不得重复注入"
+
+
+def test_inject_bridge_without_body_tag_is_unchanged():
+    html = b"<html>no body tag</html>"
+    assert stream_service._inject_bridge(html) == html
 
 
 def test_health(live_server):

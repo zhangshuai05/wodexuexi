@@ -2,7 +2,8 @@
 """会议回放通道 HTTP 服务：GET 页面/健康检查，POST WAV -> NDJSON 流式事件。
 
 路由（规格 §4.4.2）：
-    GET  /                   -> diar_web.html
+    GET  /                   -> diar_web.html（响应中注入音频模拟桥接脚本）
+    GET  /meeting_bridge.js  -> application/javascript; charset=utf-8
     GET  /api/health         -> {"ok": true, "busy": <bool>}
     POST /api/stream_meeting?name=<文件名>&fast=1
                              -> application/x-ndjson; charset=utf-8 + chunked
@@ -37,6 +38,9 @@ SERVICE_PORT = 8736
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MB
 SESSION_ROOT = Path("output/sessions")
 INDEX_FILE = Path(__file__).resolve().parent / "diar_web.html"
+BRIDGE_FILE = Path(__file__).resolve().parent / "meeting_bridge.js"
+BRIDGE_MARKER = b"meeting_bridge.js"
+BRIDGE_TAG = b'<script src="/meeting_bridge.js"></script>\n'
 
 # 同一时刻只允许一场会议；第二个请求直接 409。
 _SESSION_LOCK = threading.Lock()
@@ -125,6 +129,19 @@ def _convert_to_16k_mono(src: Path, dst: Path) -> None:
         raise RuntimeError(f"ffmpeg 转码失败（exit {proc.returncode}）: {detail}")
 
 
+def _inject_bridge(html: bytes) -> bytes:
+    """在 </body> 前注入桥接脚本标签；已存在标记时不重复注入。
+
+    只在响应内存中改写，磁盘上的 diar_web.html 保持不变。
+    """
+    if BRIDGE_MARKER in html:
+        return html
+    index = html.rfind(b"</body>")
+    if index < 0:
+        return html
+    return html[:index] + BRIDGE_TAG + html[index:]
+
+
 def _count_clusters(mapping: Dict) -> int:
     labels = set()
     for row in mapping.values():
@@ -168,13 +185,32 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
 
     def _send_html(self) -> None:
         try:
-            data = INDEX_FILE.read_bytes()
+            # 每次请求都读盘，注入只发生在响应副本中
+            data = _inject_bridge(INDEX_FILE.read_bytes())
         except OSError:
             self._send_json(404, {"error": "前端文件不存在"})
             return
         try:
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(data)
+            self.wfile.flush()
+        except OSError:
+            self._dead = True
+
+    def _send_bridge(self) -> None:
+        """返回桥接脚本本身；每次请求实时读取磁盘内容。"""
+        try:
+            data = BRIDGE_FILE.read_bytes()
+        except OSError:
+            self._send_json(404, {"error": "桥接脚本不存在"})
+            return
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/javascript; charset=utf-8")
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
@@ -228,6 +264,8 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/":
             self._send_html()
+        elif path == "/meeting_bridge.js":
+            self._send_bridge()
         elif path == "/api/health":
             self._send_json(200, {"ok": True, "busy": _SESSION_LOCK.locked()})
         else:
