@@ -158,3 +158,30 @@ def test_concurrent_appends_do_not_corrupt_lines(tmp_path):
     assert len(lines) == 100
     for line in lines:
         json.loads(line)  # 每行都必须是完整 JSON
+
+
+def test_merge_lock_is_shared_across_instances(tmp_path):
+    store_a = SessionStore(tmp_path / "s_1")
+    store_b = SessionStore(tmp_path / "s_2")
+
+    assert store_a._merge_lock is store_b._merge_lock
+
+
+def test_new_session_dir_atomic_claim(tmp_path):
+    when = datetime(2026, 10, 17, 14, 32, 0)
+    results = []
+    barrier = threading.Barrier(2)
+
+    def claim():
+        barrier.wait()
+        results.append(new_session_dir(tmp_path, when=when))
+
+    threads = [threading.Thread(target=claim) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert len(results) == 2
+    assert results[0] != results[1], "并发认领必须得到不同目录"
+    assert all(path.is_dir() for path in results)

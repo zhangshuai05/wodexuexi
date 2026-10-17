@@ -43,3 +43,32 @@ def test_local_modules_win_over_upstream():
         assert spec is not None, f"{name} 不可导入"
         assert Path(spec.origin).resolve().parent == Path(bootstrap._LOCAL), \
             f"{name} 被上游同名模块遮蔽: {spec.origin}"
+
+
+def test_claude_a2_resolves_to_repo_root():
+    import importlib.util
+    import sys
+
+    bootstrap.install()
+    sys.modules.pop("claude_a2", None)
+    spec = importlib.util.find_spec("claude_a2")
+    assert spec is not None, "claude_a2 不可导入"
+    assert Path(spec.origin).resolve().parent == Path(bootstrap.REPO).resolve(), \
+        f"claude_a2 被 streaming_asr 下的分发器遮蔽: {spec.origin}"
+
+
+def test_upstream_fingerprint_survives_unreadable_file(monkeypatch):
+    target_name = next(iter(bootstrap.BASELINE))
+    real_read_bytes = Path.read_bytes
+
+    def fake_read_bytes(self):
+        if self.name == target_name:
+            raise OSError("locked")
+        return real_read_bytes(self)
+
+    monkeypatch.setattr(Path, "read_bytes", fake_read_bytes)
+
+    drift = bootstrap.upstream_fingerprint()
+
+    assert target_name in drift
+    assert drift[target_name].startswith("unreadable:"), drift[target_name]

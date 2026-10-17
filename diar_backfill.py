@@ -52,7 +52,7 @@ def load_utterances(session_dir: Path) -> List[Dict]:
     rows: Dict[str, Dict] = {}
     skipped = 0
     if path.exists():
-        with path.open("r", encoding="utf-8") as handle:
+        with path.open("r", encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 line = line.strip()
                 if not line:
@@ -96,6 +96,7 @@ def run_backfill(
     store = SessionStore(Path(session_dir))
     existing = store.read_json("diarization.json")
     if existing is not None and not force:
+        store.build_session_json()
         return existing
 
     if not store.audio_path.exists():
@@ -111,6 +112,10 @@ def run_backfill(
     raw = fn(str(store.audio_path), utterances, models, mode)
     mapping = to_contract(raw)
 
+    if store.read_json("transcript.json") is None and utterances:
+        end_ms = max(int(u["end_ms"]) for u in utterances)
+        store.write_transcript(utterances, duration_ms=end_ms)
+
     store.write_diarization(mapping)
     store.build_session_json()
     return mapping
@@ -124,6 +129,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     bootstrap.install()
+    from session_store import SessionStore
+
+    session_dir = Path(args.session)
+    if not (session_dir / "session_audio.wav").exists():
+        raise SystemExit(f"缺少音频文件: {session_dir / 'session_audio.wav'}")
+    store = SessionStore(session_dir)
+    if not args.force and store.read_json("diarization.json") is not None:
+        print(f"[backfill] 已有 diarization.json，跳过（--force 强制重算）: {session_dir}",
+              flush=True)
+        return 0
+
     from web_server import get_models
 
     started = time.time()
@@ -132,13 +148,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"[backfill] 模型就绪 {load_seconds:.1f}s", flush=True)
 
     started = time.time()
-    mapping = run_backfill(Path(args.session), models=models, mode=args.mode, force=args.force)
+    mapping = run_backfill(session_dir, models=models, mode=args.mode, force=args.force)
     elapsed = time.time() - started
 
     speakers = sorted({v["spk_label"] for v in mapping.values()})
     print(f"[backfill] {len(mapping)} 句 -> {len(speakers)} 人 {speakers} "
           f"({elapsed:.1f}s，不含模型加载)", flush=True)
-    print(f"[backfill] 写入 {Path(args.session) / 'diarization.json'}", flush=True)
+    print(f"[backfill] 写入 {session_dir / 'diarization.json'}", flush=True)
     return 0
 
 

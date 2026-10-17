@@ -37,6 +37,8 @@ def iter_audio_chunks(
     """按 chunk_ms 切 16k 单声道 int16；最后一块的 is_last 为 True。"""
     import soundfile as sf
 
+    if chunk_ms <= 0:
+        raise SystemExit(f"chunk_ms 必须为正数: {chunk_ms}")
     _validate_wav(wav_path)
 
     frames = int(max_seconds * SAMPLE_RATE) if max_seconds > 0 else -1
@@ -76,6 +78,10 @@ def run(
     from session_store import SessionStore
 
     store = SessionStore(Path(session_dir))
+
+    # 复用已有 session 目录时，派生/追加文件必须清空，避免继承旧修正/标签或重复行
+    for stale in ("polished.json", "diarization.json", "utterances.jsonl", "events.ndjson"):
+        (store.dir / stale).unlink(missing_ok=True)
 
     if models is None:
         from web_server import get_models
@@ -139,7 +145,8 @@ def run(
         store.write_transcript(session.completed_utterances, duration_ms=session.processed_ms)
         store.build_session_json()
         if polisher is not None:
-            results = polisher.close(timeout=None)
+            # 异常路径不等待整条润色队列，`on_polish` 已逐句落盘
+            results = polisher.close(timeout=5)
             store.write_polished(results)
             store.build_session_json()
         raise
@@ -148,16 +155,17 @@ def run(
     store.write_transcript(session.completed_utterances, duration_ms=session.processed_ms)
     store.build_session_json()
 
-    if not no_diar:
-        from diar_backfill import run_backfill
-        run_backfill(store.dir, models=models, backfill=backfill_fn)
-
-    if polisher is not None:
-        # 收敛不变量：回填 -> close -> write_polished -> build_session_json 是最终合并顺序，
-        # 跨实例（润色回调线程 vs 回填路径）的 merge 竞争依赖该顺序才无害；不要重排。
-        results = polisher.close(timeout=None)
-        store.write_polished(results)
-        store.build_session_json()
+    try:
+        if not no_diar:
+            from diar_backfill import run_backfill
+            run_backfill(store.dir, models=models, backfill=backfill_fn)
+    finally:
+        if polisher is not None:
+            # 收敛不变量：回填 -> close -> write_polished -> build_session_json 是最终合并顺序，
+            # 跨实例（润色回调线程 vs 回填路径）的 merge 竞争依赖该顺序才无害；不要重排。
+            results = polisher.close(timeout=None)
+            store.write_polished(results)
+            store.build_session_json()
 
     return store.read_json("session.json") or {}
 

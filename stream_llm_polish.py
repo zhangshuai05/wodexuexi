@@ -191,9 +191,10 @@ class Polisher:
             context = "\n".join(self._context) if self._context else "（无）"
             reply = self._call(PROMPT_TMPL.format(context=context, raw=raw))
             obj = extract_json(reply)
-            if not obj or "polished" not in obj:
+            polished = obj.get("polished") if isinstance(obj, dict) else None
+            if not isinstance(polished, str):
                 return {**base, "error": "LLM 输出无法解析为 JSON"}
-            candidate = str(obj["polished"]).strip()
+            candidate = polished.strip()
             if not accept_rewrite(raw, candidate):
                 return {**base, "error": "守卫驳回改写"}
             return {

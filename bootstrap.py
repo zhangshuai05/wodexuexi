@@ -15,6 +15,7 @@ REPO = Path(r"D:\Deepseek\diarization_cl-main")
 _LOCAL = Path(__file__).resolve().parent
 
 _SUBPATHS: tuple[Path, ...] = (
+    REPO,
     REPO / ".zhang",
     REPO / "AliMeeting",
     REPO / "streaming_asr",
@@ -38,7 +39,11 @@ def upstream_fingerprint() -> dict[str, str]:
         if not path.exists():
             drift[name] = "missing"
             continue
-        data = path.read_bytes()
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            drift[name] = f"unreadable: {type(exc).__name__}: {exc}"
+            continue
         digest = hashlib.sha256(data).hexdigest()[:16]
         if digest != expected_hash or len(data) != expected_size:
             drift[name] = f"changed: {digest} {len(data)}B (baseline {expected_hash} {expected_size}B)"
@@ -51,7 +56,7 @@ def install() -> None:
     上游目录之后，本项目目录始终被强制放在 sys.path 首位，
     保证与上游同名的本地模块（如 run_offline、stream_llm_polish）不被遮蔽。
     """
-    for path in _SUBPATHS:
+    for path in reversed(_SUBPATHS):
         text = str(path)
         if text not in sys.path:
             sys.path.insert(0, text)

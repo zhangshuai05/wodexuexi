@@ -216,3 +216,67 @@ def test_exception_mid_feed_still_writes_transcript(tmp_path):
         )
 
     assert (session_dir / "transcript.json").exists()
+
+
+def test_rerun_clears_stale_derived_artifacts(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+    session_dir = tmp_path / "s_stale"
+    session_dir.mkdir()
+    (session_dir / "polished.json").write_text(
+        '{"utt_old": {"polished_text": "旧"}}', encoding="utf-8")
+    (session_dir / "diarization.json").write_text(
+        '{"utt_old": {"spk": 0, "spk_label": "speaker_0"}}', encoding="utf-8")
+    (session_dir / "utterances.jsonl").write_text(
+        '{"utt_id": "utt_old", "start_ms": 0, "end_ms": 10, "raw_text": "旧"}\n',
+        encoding="utf-8")
+    (session_dir / "events.ndjson").write_text('{"t": "old"}\n', encoding="utf-8")
+
+    run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
+        session_factory=lambda p, m: FakeSession(p),
+        models={},
+    )
+
+    assert not (session_dir / "diarization.json").exists()
+    assert not (session_dir / "polished.json").exists()
+    utt_text = (session_dir / "utterances.jsonl").read_text(encoding="utf-8")
+    event_text = (session_dir / "events.ndjson").read_text(encoding="utf-8")
+    assert "utt_old" not in utt_text
+    assert '"t": "old"' not in event_text
+    assert len(utt_text.splitlines()) == 1, "旧行不得残留，新行不得重复"
+
+
+def test_chunk_ms_must_be_positive(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+
+    with pytest.raises(SystemExit):
+        list(run_offline.iter_audio_chunks(wav, 0))
+
+
+def test_backfill_failure_still_closes_polisher(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+    session_dir = tmp_path / "s_bf_fail"
+    created = []
+
+    def factory(on_result):
+        polisher = FakePolisher(on_result)
+        created.append(polisher)
+        return polisher
+
+    def boom(wav_path, utts, models, mode):
+        raise RuntimeError("backfill down")
+
+    with pytest.raises(RuntimeError):
+        run_offline.run(
+            wav, session_dir, chunk_ms=200, fast=True,
+            session_factory=lambda p, m: FakeSession(p),
+            polisher_factory=factory,
+            backfill_fn=boom,
+            models={},
+        )
+
+    assert len(created) == 1
+    assert created[0].closed is True, "回填异常时也必须关闭润色器"

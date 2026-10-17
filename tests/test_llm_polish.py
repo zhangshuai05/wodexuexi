@@ -100,6 +100,16 @@ def test_unparseable_output_fails_soft():
     assert out["utt_0001"]["error"] == "LLM 输出无法解析为 JSON"
 
 
+def test_null_polished_fails_soft():
+    results = []
+    polisher = Polisher(results.append, call=lambda prompt: '{"polished": null}')
+    polisher.submit(_event())
+    out = polisher.close(timeout=5)
+
+    assert out["utt_0001"]["polished_text"] == "大家早上好今天我们把思露整理一下"
+    assert out["utt_0001"]["error"] == "LLM 输出无法解析为 JSON"
+
+
 def test_guard_rejection_keeps_raw():
     results = []
     polisher = Polisher(results.append, call=lambda prompt: '{"polished":"完全不同的另一句话很长很长很长很长很长很长很长很长很长"}')

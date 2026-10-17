@@ -26,6 +26,9 @@ UTTERANCE_KEYS = ("utt_id", "start_ms", "end_ms", "raw_text")
 # 进程内替换锁：不同 SessionStore 实例可能并发写同一目录（Windows 下 replace 需串行）
 _REPLACE_LOCK = threading.Lock()
 
+# 跨实例共享，因为 `run_backfill` 会为同一目录新建第二个 store
+_MERGE_LOCK = threading.Lock()
+
 # 进程内追加锁：主线程与润色线程会并发 append，Windows 下需串行化整次写入
 _APPEND_LOCK = threading.Lock()
 
@@ -37,11 +40,13 @@ def new_session_dir(root: Path, when: Optional[datetime] = None) -> Path:
     root = Path(root)
     candidate = root / base
     suffix = 0
-    while candidate.exists():
-        suffix += 1
-        candidate = root / f"{base}_{suffix}"
-    candidate.mkdir(parents=True, exist_ok=True)
-    return candidate
+    while True:
+        try:
+            candidate.mkdir(parents=True)
+            return candidate
+        except FileExistsError:
+            suffix += 1
+            candidate = root / f"{base}_{suffix}"
 
 
 def _atomic_write_json(path: Path, obj: Any) -> None:
@@ -89,7 +94,7 @@ class SessionStore:
         self.session_id = session_id or self.dir.name
         self.started_at = started_at or datetime.now().astimezone().isoformat(timespec="seconds")
         self.audio_path = self.dir / "session_audio.wav"
-        self._merge_lock = threading.Lock()
+        self._merge_lock = _MERGE_LOCK
 
     # ---- 写入 ----
 

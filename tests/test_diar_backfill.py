@@ -127,3 +127,47 @@ def test_run_backfill_empty_utterances_writes_empty_mapping(tmp_path):
 
     out = run_backfill(store.dir, backfill=lambda *a: {})
     assert out == {}
+
+
+def test_rerun_rebuilds_session_json(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript(
+        [{"utt_id": "u1", "start_ms": 0, "end_ms": 100, "raw_text": "你好"}],
+        duration_ms=100,
+    )
+    store.audio_path.write_bytes(b"RIFF")
+    store.write_diarization({"u1": {"spk": 0, "spk_label": "speaker_0"}})
+    store.build_session_json()
+    (store.dir / "session.json").unlink()
+
+    out = run_backfill(store.dir)
+
+    assert out == {"u1": {"spk": 0, "spk_label": "speaker_0"}}
+    assert (store.dir / "session.json").exists(), "幂等路径也必须重建 session.json"
+    session = json.loads((store.dir / "session.json").read_text(encoding="utf-8"))
+    assert session["status"] == "diarized"
+
+
+def test_crash_recovery_reconstructs_transcript(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.append_utterance({"utt_id": "u1", "start_ms": 0, "end_ms": 100, "raw_text": "你好"})
+    store.audio_path.write_bytes(b"RIFF")
+
+    run_backfill(store.dir, backfill=lambda *a: {"u1": "Speaker_1"})
+
+    assert (store.dir / "transcript.json").exists(), "崩溃恢复必须重建 transcript.json"
+    session = json.loads((store.dir / "session.json").read_text(encoding="utf-8"))
+    assert len(session["utterances"]) == 1
+    assert session["status"] == "diarized"
+
+
+def test_load_utterances_handles_truncated_utf8(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.append_utterance({"utt_id": "u1", "start_ms": 0, "end_ms": 10, "raw_text": "好"})
+    truncated = '{"utt_id": "u2", "start_ms": 10, "end_ms": 20, "raw_text": "你'.encode("utf-8")[:-1]
+    with (store.dir / "utterances.jsonl").open("ab") as handle:
+        handle.write(truncated)  # 末尾是被截断的多字节字符，无换行
+
+    utts = load_utterances(store.dir)
+
+    assert [u["utt_id"] for u in utts] == ["u1"]
