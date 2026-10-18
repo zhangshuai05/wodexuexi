@@ -9,7 +9,21 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-REPO = Path(r"D:\Deepseek\diarization_cl-main")
+def _resolve_repo(here: Path | None = None) -> Path:
+    """定位 diarization_cl-main：monorepo 同级 → 项目内 vendored → 旧绝对路径。"""
+    here = Path(here or __file__).resolve()
+    candidates = (
+        here.parent.parent / "diarization_cl-main",  # monorepo: <root>/Meeting_main/..
+        here.parent / "diarization_cl-main",         # vendored inside Meeting_main
+        Path(r"D:\Deepseek\diarization_cl-main"),    # legacy local checkout
+    )
+    for path in candidates:
+        if path.is_dir():
+            return path
+    return candidates[-1]
+
+
+REPO = _resolve_repo()
 
 # 本项目根目录：必须始终排在 sys.path 最前，避免被上游同名模块遮蔽
 _LOCAL = Path(__file__).resolve().parent

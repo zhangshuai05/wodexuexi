@@ -11,7 +11,35 @@ def test_upstream_paths_exist():
     assert paths, "check_paths 不应返回空"
     missing = [name for name, ok in paths.items() if not ok]
     assert not missing, f"缺失的上游路径: {missing}"
-    assert (Path(r"D:\Deepseek\diarization_cl-main") / ".zhang").is_dir()
+    assert (Path(bootstrap.REPO) / ".zhang").is_dir()
+
+
+def test_resolve_repo_prefers_monorepo_sibling(tmp_path):
+    root = tmp_path / "repo"
+    project = root / "Meeting_main"
+    upstream = root / "diarization_cl-main"
+    project.mkdir(parents=True)
+    upstream.mkdir()
+
+    assert bootstrap._resolve_repo(project / "bootstrap.py") == upstream
+
+
+def test_resolve_repo_falls_back_to_vendored(tmp_path):
+    project = tmp_path / "Meeting_main"
+    upstream = project / "diarization_cl-main"
+    project.mkdir(parents=True)
+    upstream.mkdir()
+
+    assert bootstrap._resolve_repo(project / "bootstrap.py") == upstream
+
+
+def test_resolve_repo_falls_back_to_legacy_path(tmp_path):
+    project = tmp_path / "Meeting_main"
+    project.mkdir(parents=True)
+
+    resolved = bootstrap._resolve_repo(project / "bootstrap.py")
+
+    assert resolved == Path(r"D:\Deepseek\diarization_cl-main")
 
 
 def test_install_is_idempotent():
