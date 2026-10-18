@@ -1,0 +1,70 @@
+{
+  "config": {
+    "corpus": "AliMeeting Eval (far-field, ch0, mono)",
+    "window": "2.0s/1.0s",
+    "max_per_speaker": 200,
+    "method": "真值段内窗 + CAM++ 嵌入 + 留一最近质心；丢弃重叠段",
+    "thresholds": {
+      "可分": "gap>0.30 且 acc>90%",
+      "不可分": "gap<0.10 或 acc<75%"
+    }
+  },
+  "rows": [
+    {
+      "meeting": "R8009_M8020",
+      "true_k": 2,
+      "n_windows": 354,
+      "n_segments": 235,
+      "within_median": 0.4119250178337097,
+      "between_median": 0.9076115787029266,
+      "gap": 0.4956865608692169,
+      "loo_accuracy": 1.0,
+      "auc": 0.99998,
+      "margin_median": 0.6440630257129669,
+      "verdict": "可分（问题在聚类）",
+      "elapsed_s": 9.3
+    },
+    {
+      "meeting": "R8001_M8004",
+      "true_k": 3,
+      "n_windows": 35,
+      "n_segments": 19,
+      "within_median": 0.6044767796993256,
+      "between_median": 0.8836695961654186,
+      "gap": 0.27919281646609306,
+      "loo_accuracy": 1.0,
+      "auc": 0.97504,
+      "margin_median": 0.4215788394212723,
+      "verdict": "边缘（嵌入与聚类都要动）",
+      "elapsed_s": 0.9
+    },
+    {
+      "meeting": "R8007_M8011",
+      "true_k": 3,
+      "n_windows": 22,
+      "n_segments": 12,
+      "within_median": 0.40606003999710083,
+      "between_median": 0.8796946406364441,
+      "gap": 0.47363460063934326,
+      "loo_accuracy": 1.0,
+      "auc": 1.0,
+      "margin_median": 0.4763301610946655,
+      "verdict": "可分（问题在聚类）",
+      "elapsed_s": 0.6
+    },
+    {
+      "meeting": "R8008_M8013",
+      "true_k": 3,
+      "n_windows": 146,
+      "n_segments": 83,
+      "within_median": 0.5381233990192413,
+      "between_median": 0.8088521659374237,
+      "gap": 0.2707287669181824,
+      "loo_accuracy": 1.0,
+      "auc": 0.96818,
+      "margin_median": 0.38520537316799164,
+      "verdict": "边缘（嵌入与聚类都要动）",
+      "elapsed_s": 3.7
+    }
+  ]
+}

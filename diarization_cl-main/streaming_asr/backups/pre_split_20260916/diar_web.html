@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>说话人分离测试台</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --canvas: #0d1215;
+    --rail: #111a1f;
+    --surface: #172228;
+    --surface-2: #1d2a31;
+    --surface-3: #24343c;
+    --text: #e7eff0;
+    --text-2: #b2c0c5;
+    --text-3: #819199;
+    --border: #2b3d46;
+    --accent: #63c9bb;
+    --accent-hover: #83d9ce;
+    --accent-ink: #07221f;
+    --success: #77d3a1;
+    --success-bg: #153329;
+    --warn: #efc36d;
+    --warn-bg: #3b2d14;
+    --danger: #f29389;
+    --danger-bg: #41211f;
+    --focus: #a0eee4;
+    --radius: 8px;
+    --radius-sm: 6px;
+    --sans: "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+    --spk0: #5ebee8;
+    --spk1: #ec8d82;
+    --spk2: #76c998;
+    --spk3: #e8bd72;
+    --spk4: #ae9ae8;
+    --spk5: #70cbd1;
+    --spk6: #e58ab6;
+    --spk7: #c99f79;
+  }
+
+  body.light {
+    color-scheme: light;
+    --canvas: #f6faf9;
+    --rail: #edf4f2;
+    --surface: #ffffff;
+    --surface-2: #f0f6f4;
+    --surface-3: #e0ece8;
+    --text: #152126;
+    --text-2: #45565e;
+    --text-3: #6a7b83;
+    --border: #c9d9d5;
+    --accent: #167e72;
+    --accent-hover: #0f695f;
+    --accent-ink: #ffffff;
+    --success: #207446;
+    --success-bg: #e4f5ea;
+    --warn: #89600b;
+    --warn-bg: #fff5da;
+    --danger: #a63d36;
+    --danger-bg: #fde9e6;
+    --focus: #0a6c61;
+  }
+
+  * { box-sizing: border-box; }
+  html { min-width: 320px; background: var(--canvas); }
+  body {
+    min-height: 100dvh;
+    margin: 0;
+    background: var(--canvas);
+    color: var(--text);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input { font: inherit; }
+  button { color: inherit; }
+  button:focus-visible, input:focus-visible, label:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: minmax(304px, 360px) minmax(0, 1fr);
+    min-height: 100dvh;
+  }
+
+  .side {
+    min-width: 0;
+    padding: 18px;
+    overflow-y: auto;
+    background: var(--rail);
+    border-right: 1px solid var(--border);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .brand-mark {
+    display: grid;
+    width: 36px;
+    height: 30px;
+    place-items: center;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  .brand-copy { min-width: 0; }
+  .brand-title { font-size: 16px; font-weight: 650; line-height: 1.2; }
+  .brand-sub { margin-top: 3px; color: var(--text-3); font-size: 12px; }
+
+  .setup-block { margin: 0 0 20px; padding: 0; border: 0; min-width: 0; }
+  .setup-block:last-of-type { margin-bottom: 16px; }
+  .setup-label {
+    display: block;
+    margin: 0 0 8px;
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 650;
+  }
+  .setup-help { margin: 8px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.5; }
+
+  .drop {
+    position: relative;
+    display: block;
+    min-height: 132px;
+    padding: 24px 16px;
+    overflow: hidden;
+    border: 1px dashed #46616b;
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+    text-align: center;
+    transition: border-color .15s, background .15s, transform .15s;
+  }
+  .drop:hover, .drop.over {
+    border-color: var(--accent);
+    background: var(--surface-2);
+  }
+  .drop:active { transform: translateY(1px); }
+  .drop .big { display: block; color: var(--text); font-size: 14px; font-weight: 650; }
+  .drop .small { display: block; margin-top: 7px; color: var(--text-3); font-size: 12px; line-height: 1.5; }
+  .file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+  .fileline {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 9px 10px;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text-2);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+  .fileline::before {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--accent);
+    content: "";
+  }
+  .fileline.show { display: flex; }
+
+  .seg {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+  .seg button {
+    min-width: 0;
+    padding: 8px 6px;
+    border: 0;
+    border-right: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+    transition: background .15s, color .15s;
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { background: var(--surface-2); }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 650; }
+  .seg button:active { transform: translateY(1px); }
+
+  .cards { display: grid; gap: 7px; }
+  .method {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color .15s, background .15s, transform .15s;
+  }
+  .method:hover { border-color: var(--accent); background: var(--surface-2); }
+  .method:active { transform: translateY(1px); }
+  .method:has(.chk:checked) { border-color: color-mix(in srgb, var(--accent) 68%, var(--border)); }
+  .chk { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+  .method-name { min-width: 0; font-size: 13px; font-weight: 650; line-height: 1.3; }
+  .method-meta { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .who {
+    padding: 3px 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .who.dsh { border-color: var(--accent); color: var(--accent); }
+  .card-status { color: var(--text-3); font-family: var(--mono); font-size: 10.5px; white-space: nowrap; }
+
+  .run {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: var(--accent-ink);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0;
+    transition: background .15s, border-color .15s, transform .15s, opacity .15s;
+  }
+  .run:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .run:active:not(:disabled) { transform: translateY(1px); }
+  .run:disabled { cursor: not-allowed; opacity: .42; }
+  .player { display: none; margin-top: 12px; }
+  .player.show { display: block; }
+  .player label { display: block; margin-bottom: 6px; color: var(--text-3); font-size: 12px; }
+  audio { width: 100%; height: 34px; }
+
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-3);
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .theme-track {
+    position: relative;
+    width: 34px;
+    height: 18px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-3);
+  }
+  .theme-track::after {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--text-2);
+    content: "";
+    transition: transform .15s, background .15s;
+  }
+  .theme-toggle[aria-pressed="true"] .theme-track { border-color: var(--accent); background: var(--accent); }
+  .theme-toggle[aria-pressed="true"] .theme-track::after { background: var(--accent-ink); transform: translateX(16px); }
+
+  .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    min-height: 62px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--canvas);
+  }
+  .header .title { font-size: 16px; font-weight: 700; }
+  .header .sub { color: var(--text-3); font-size: 12px; }
+  .scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 24px 42px; }
+  .empty {
+    display: flex;
+    min-height: calc(100dvh - 98px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    color: var(--text-3);
+    text-align: center;
+  }
+  .empty h2 { margin: 0; color: var(--text); font-size: 22px; font-weight: 650; }
+  .empty p { max-width: 330px; margin: 9px 0 0; font-size: 13px; line-height: 1.65; }
+
+  .progressbar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--accent) 44%, var(--border));
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-2);
+    font-size: 13px;
+  }
+  .progressbar.show { display: flex; }
+  .progress-mark {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .progress-mark { animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 50% { transform: scale(.62); opacity: .5; } }
+  }
+  .err {
+    display: none;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    background: var(--danger-bg);
+    color: var(--danger);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .err.show { display: block; }
+
+  .compare { display: none; gap: 12px; }
+  .compare.show { display: grid; }
+  .lane { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  .lane-head {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, border-color .15s;
+  }
+  .lane-head:hover { background: var(--surface-2); }
+  .lane.open .lane-head { border-bottom-color: var(--border); }
+  .lane-heading { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 7px; }
+  .lane-title { min-width: 0; font-size: 14px; font-weight: 700; }
+  .lane-mode, .badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--text-2);
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .lane-mode { color: var(--accent); }
+  .badges { display: flex; min-width: 0; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+  .badge.ok { border-color: var(--success); background: var(--success-bg); color: var(--success); }
+  .badge.warn { border-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+  .badge.error { border-color: var(--danger); background: var(--danger-bg); color: var(--danger); }
+  .badge.info { border-color: color-mix(in srgb, var(--accent) 70%, var(--border)); color: var(--accent); }
+  .lane-arrow { color: var(--text-3); font-family: var(--mono); font-size: 19px; line-height: 1; }
+  .lane-arrow::before { content: "+"; }
+  .lane.open .lane-arrow::before { content: "-"; }
+  .lane-body { display: none; padding: 14px 16px 16px; }
+  .lane.open .lane-body { display: block; }
+  .lane-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .lg {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 7px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--text-2);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; }
+  .lane-turns { display: grid; gap: 7px; }
+  .turn {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+  }
+  .turn .spk {
+    align-self: start;
+    min-width: 0;
+    padding: 4px 6px;
+    border-radius: 4px;
+    color: #10181b;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+  }
+  .turn .body { min-width: 0; }
+  .turn .ts { margin-bottom: 4px; color: var(--text-3); font-family: var(--mono); font-size: 11px; }
+  .turn .txt { color: var(--text); font-size: 13.5px; line-height: 1.65; overflow-wrap: anywhere; }
+  .turn.ovl {
+    border-left-color: var(--spk4);
+    background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--spk0) 12%, var(--surface-2)) 0 9px, color-mix(in srgb, var(--spk1) 12%, var(--surface-2)) 9px 18px);
+  }
+  .spk.dual { background: linear-gradient(90deg, var(--spk0) 0 50%, var(--spk1) 50% 100%); }
+  .badge-ovl { margin-left: 5px; color: var(--warn); font-size: 10px; font-weight: 650; }
+  .badge-low { margin-left: 5px; color: var(--text-3); font-size: 10px; font-weight: 600; border: 1px solid var(--text-3); border-radius: 4px; padding: 0 4px; }
+  .lane-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  .mini-run {
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    font-size: 12px;
+    transition: border-color .15s, background .15s, color .15s, transform .15s;
+  }
+  .mini-run:hover { border-color: var(--accent); background: var(--surface-3); color: var(--text); }
+  .mini-run:active { transform: translateY(1px); }
+  .lane-empty, .lane-error { padding: 4px 0; color: var(--text-3); font-size: 13px; line-height: 1.5; }
+  .lane-error { color: var(--danger); }
+
+  @media (max-width: 900px) {
+    .app { display: block; min-height: 100dvh; }
+    .side { overflow: visible; border-right: 0; border-bottom: 1px solid var(--border); }
+    .main { min-height: auto; }
+    .header { min-height: 54px; padding: 0 16px; align-items: center; }
+    .header .sub { display: none; }
+    .scroll { overflow: visible; padding: 16px 16px 28px; }
+    .empty { min-height: 210px; padding: 22px 12px; }
+  }
+  @media (max-width: 480px) {
+    .side { padding: 16px; }
+    .brand { margin-bottom: 18px; }
+    .method { grid-template-columns: auto minmax(0, 1fr); }
+    .method-meta { grid-column: 2; justify-content: space-between; }
+    .lane-head { align-items: start; }
+    .badges { justify-content: flex-start; }
+    .turn { grid-template-columns: 1fr; gap: 7px; }
+    .turn .spk { width: max-content; max-width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" aria-label="运行配置">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">DSH</span>
+      <div class="brand-copy">
+        <div class="brand-title">说话人分离</div>
+        <div class="brand-sub">方法对比测试台</div>
+      </div>
+    </div>
+
+    <section class="setup-block" aria-labelledby="file-label">
+      <h2 class="setup-label" id="file-label">输入音频</h2>
+      <label class="drop" id="drop" for="file">
+        <input class="file-input" type="file" id="file" accept="audio/*" aria-describedby="file-help" />
+        <span class="big">拖入音频文件，或点击选择</span>
+        <span class="small" id="file-help">支持 wav、mp3、aac、m4a、flac。服务端自动转为 16k 单声道。</span>
+      </label>
+      <div class="fileline" id="fileline"><span id="filename"></span></div>
+    </section>
+
+    <fieldset class="setup-block">
+      <legend class="setup-label">降噪前置</legend>
+      <div class="seg" id="denoiseSeg" role="group" aria-label="降噪模式">
+        <button type="button" data-d="auto" class="on" aria-pressed="true">自动识别</button>
+        <button type="button" data-d="on" aria-pressed="false">强制开启</button>
+        <button type="button" data-d="off" aria-pressed="false">关闭</button>
+      </div>
+    </fieldset>
+
+    <fieldset class="setup-block">
+      <legend class="setup-label">段级重分配（评审开关，默认关）</legend>
+      <div class="seg" id="reassignSeg" role="group" aria-label="段级重分配">
+        <button type="button" data-r="off" class="on" aria-pressed="true">关</button>
+        <button type="button" data-r="on" aria-pressed="false">开</button>
+      </div>
+      <p class="setup-help">
+        快照泳道：
+        <select id="snapSel" aria-label="快照版本">
+          <option value="v0" selected>snapshot_v0（历史最优）</option>
+          <option value="v1">snapshot_v1（与当前代码逐字节相同）</option>
+        </select>
+      </p>
+    </fieldset>
+
+    <section class="setup-block" aria-labelledby="methods-label">
+      <h2 class="setup-label" id="methods-label">分离方法</h2>
+      <div class="cards" id="cards"></div>
+      <p class="setup-help">可连续提交多个音频。任务按提交顺序运行，每次结果独立保留。</p>
+    </section>
+
+    <button class="run" id="run" disabled>开始分离</button>
+    <div class="player" id="playerWrap">
+      <label for="player">音频预览</label>
+      <audio id="player" controls></audio>
+    </div>
+    <button class="theme-toggle" type="button" id="themeToggle" aria-pressed="true" aria-label="切换为浅色模式">
+      <span class="theme-track" aria-hidden="true"></span>
+      <span id="themeText">深色外观</span>
+    </button>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <span class="title">分离结果</span>
+      <span class="sub">按任务保留分离结果</span>
+    </header>
+    <div class="scroll" id="scroll">
+      <section class="empty" id="empty" aria-live="polite">
+        <h2 id="emptyTitle">等待音频</h2>
+        <p id="emptyText">选择音频和分离方法后，即可在这里查看逐条结果。</p>
+      </section>
+      <div class="progressbar" id="progress" role="status" aria-live="polite">
+        <span class="progress-mark" aria-hidden="true"></span>
+        <span id="spintxt">正在准备任务</span>
+      </div>
+      <div class="err" id="err" role="alert"></div>
+      <div class="compare" id="compare"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const SPK_COLORS = ['var(--spk0)', 'var(--spk1)', 'var(--spk2)', 'var(--spk3)',
+                    'var(--spk4)', 'var(--spk5)', 'var(--spk6)', 'var(--spk7)'];
+const MODE_NAMES = { auto: '自动降噪', on: '强制降噪', off: '原始' };
+const PREFS_KEY = 'diar-web-preferences';
+let file = null;
+let lanes = [];
+let results = {};
+let resultMeta = {};
+let denoise = 'auto';
+let reassign = 'off';
+let snap = 'v0';
+let timerId = null;
+let runQueue = [];
+let queueBusy = false;
+let runSeq = 0;
+const prefs = loadPrefs();
+let methodSelection = prefs.methods && typeof prefs.methods === 'object' ? prefs.methods : {};
+
+function idOf(key, mode, runId) { return key + '__' + mode + (runId ? '__' + runId : ''); }
+function keyOf(id) { return id.split('__')[0]; }
+function modeOf(id) { return id.split('__')[1]; }
+
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch (e) { return {}; }
+}
+
+function savePrefs() {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({
+      light: document.body.classList.contains('light'),
+      methods: methodSelection
+    }));
+  } catch (e) {}
+}
+
+function applyTheme(isLight) {
+  document.body.classList.toggle('light', isLight);
+  $('#themeToggle').setAttribute('aria-pressed', String(!isLight));
+  $('#themeToggle').setAttribute('aria-label', isLight ? '切换为深色模式' : '切换为浅色模式');
+  $('#themeText').textContent = isLight ? '浅色外观' : '深色外观';
+}
+
+function setTheme() {
+  applyTheme(!document.body.classList.contains('light'));
+  savePrefs();
+}
+
+applyTheme(prefs.light === true);
+$('#themeToggle').addEventListener('click', setTheme);
+$('#drop').addEventListener('dragover', e => { e.preventDefault(); $('#drop').classList.add('over'); });
+$('#drop').addEventListener('dragleave', () => $('#drop').classList.remove('over'));
+$('#drop').addEventListener('drop', e => {
+  e.preventDefault();
+  $('#drop').classList.remove('over');
+  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+$('#file').addEventListener('change', e => { if (e.target.files.length) setFile(e.target.files[0]); });
+
+document.querySelectorAll('#denoiseSeg button').forEach(b => b.addEventListener('click', () => {
+  denoise = b.dataset.d;
+  document.querySelectorAll('#denoiseSeg button').forEach(x => {
+    const active = x === b;
+    x.classList.toggle('on', active);
+    x.setAttribute('aria-pressed', String(active));
+  });
+}));
+
+// 段级重分配开关（默认关；snapshot_v0 无 reassign 形参 → 置灰）
+function syncReassignGate() {
+  const onBtn = document.querySelector('#reassignSeg button[data-r="on"]');
+  const blocked = snap === 'v0';
+  onBtn.disabled = blocked;
+  onBtn.title = blocked ? 'snapshot_v0 无 reassign 形参（快照内也无 reassign_core）' : '';
+}
+
+function paintReassign() {
+  document.querySelectorAll('#reassignSeg button').forEach(x => {
+    const active = x.dataset.r === reassign;
+    x.classList.toggle('on', active);
+    x.setAttribute('aria-pressed', String(active));
+  });
+  syncReassignGate();
+}
+
+document.querySelectorAll('#reassignSeg button').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.r === 'on' && snap === 'v0') return;
+  reassign = b.dataset.r;
+  paintReassign();
+}));
+
+$('#snapSel').addEventListener('change', e => {
+  snap = e.target.value;
+  if (snap === 'v0' && reassign === 'on') reassign = 'off';
+  paintReassign();
+});
+paintReassign();
+
+function setFile(f) {
+  file = f;
+  $('#filename').textContent = f.name + '  (' + (f.size / 1048576).toFixed(1) + ' MB)';
+  $('#fileline').classList.add('show');
+  $('#player').src = URL.createObjectURL(f);
+  $('#playerWrap').classList.add('show');
+  $('#emptyTitle').textContent = '音频已加载';
+  $('#emptyText').textContent = '确认分离方法后，点击“开始分离”运行对比。';
+  renderCards();
+  updateRun();
+}
+
+function checked(key) {
+  const el = document.getElementById('chk-' + key);
+  return el ? el.checked : true;
+}
+
+function updateRun() {
+  $('#run').disabled = !file || !lanes.some(l => checked(l.key));
+}
+
+async function loadLanes() {
+  try {
+    const r = await fetch('/api/lanes');
+    const j = await r.json();
+    lanes = j.lanes || [];
+  } catch (e) {
+    lanes = [];
+  }
+  renderCards();
+  updateRun();
+}
+
+function renderCards() {
+  if (!lanes.length) {
+    $('#cards').innerHTML = '<div class="setup-help">暂无方法，服务未响应 /api/lanes。</div>';
+    return;
+  }
+  $('#cards').innerHTML = lanes.map(l => (
+    '<label class="method" for="chk-' + l.key + '">' +
+      '<input type="checkbox" class="chk" id="chk-' + l.key + '" data-key="' + l.key + '"' +
+        (methodSelection[l.key] === false ? '' : ' checked') + ' />' +
+      '<span class="method-name">' + esc(l.label) + '</span>' +
+      '<span class="method-meta">' +
+        '<span class="who ' + l.kind + '">' + (l.kind === 'dsh' ? '我方' : 'Claude') + '</span>' +
+        '<span class="card-status" id="st-' + l.key + '">' + statusHtml(l.key) + '</span>' +
+      '</span>' +
+    '</label>'
+  )).join('');
+  document.querySelectorAll('#cards .chk').forEach(input => {
+    input.addEventListener('change', () => rememberMethod(input.dataset.key, input.checked));
+  });
+}
+
+function rememberMethod(key, selected) {
+  if (selected) delete methodSelection[key];
+  else methodSelection[key] = false;
+  savePrefs();
+  updateRun();
+}
+
+function statusHtml(key) {
+  const ids = Object.keys(results).filter(i => keyOf(i) === key);
+  if (!ids.length) return '';
+  const latest = ids.map(i => results[i])
+    .filter(r => r && !r._err && r._t != null)
+    .sort((a, b) => b._t - a._t)[0];
+  if (!latest) return ids.length + ' 版';
+  return ids.length + ' 版, ' + latest.elapsed + 's';
+}
+
+function updateCard(key) {
+  const st = document.getElementById('st-' + key);
+  if (st) st.textContent = statusHtml(key);
+}
+
+function fmt(t) {
+  const m = Math.floor(t / 60), s = Math.floor(t % 60);
+  return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function startTimer() {
+  const t0 = Date.now();
+  clearInterval(timerId);
+  timerId = setInterval(() => {
+    const el = document.getElementById('elapsed');
+    if (el) el.textContent = '，已运行 ' + fmt((Date.now() - t0) / 1000);
+  }, 1000);
+}
+
+$('#run').addEventListener('click', run);
+
+async function run() {
+  if (!file) return;
+  const sel = lanes.filter(l => checked(l.key)).map(l => l.key);
+  if (!sel.length) {
+    $('#err').textContent = '请先勾选至少一个方法。';
+    $('#err').classList.add('show');
+    return;
+  }
+  runQueue.push({ id: ++runSeq, file, mode: denoise, lanes: sel,
+                  reassign, snap });
+  $('#empty').style.display = 'none';
+  $('#compare').classList.add('show');
+  $('#progress').classList.add('show');
+  const ahead = runQueue.length - (queueBusy ? 0 : 1);
+  $('#spintxt').innerHTML = ahead
+    ? '任务已排队，前面还有 ' + ahead + ' 个任务<span id="elapsed"></span>'
+    : '正在连接服务<span id="elapsed"></span>';
+  processQueue();
+}
+
+async function processQueue() {
+  if (queueBusy) return;
+  queueBusy = true;
+  try {
+    while (runQueue.length) await runCompare(runQueue.shift());
+  } finally {
+    queueBusy = false;
+    if (!runQueue.length) $('#progress').classList.remove('show');
+  }
+}
+
+async function runCompare(job) {
+  const runFile = job.file;
+  const runMode = job.mode;
+  const sel = job.lanes;
+  $('#empty').style.display = 'none';
+  $('#err').classList.remove('show');
+  $('#compare').classList.add('show');
+  $('#progress').classList.add('show');
+  $('#spintxt').innerHTML = '正在连接服务<span id="elapsed"></span>';
+  startTimer();
+  const ids = sel.map(k => idOf(k, runMode, job.id));
+  ids.forEach(id => { resultMeta[id] = { fileName: runFile.name }; });
+  try {
+    const url = '/api/compare?name=' + encodeURIComponent(runFile.name) +
+                '&lanes=' + sel.join(',') + '&denoise=' + runMode +
+                '&reassign=' + (job.reassign || 'off') + '&snap=' + (job.snap || 'v0');
+    const res = await fetch(url, { method: 'POST', body: runFile });
+    if (!res.ok) {
+      let msg = 'HTTP ' + res.status;
+      try { const j = await res.json(); if (j.error) msg = j.error; } catch (e) {}
+      throw new Error(msg);
+    }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 1);
+        if (!line) continue;
+        let ev;
+        try { ev = JSON.parse(line); } catch (e) { continue; }
+        if (ev.t === 'progress') {
+          $('#spintxt').innerHTML = esc(ev.msg) + '<span id="elapsed"></span>';
+        } else if (ev.t === 'done') {
+          const id = idOf(ev.lane, runMode, job.id);
+          ev.result._t = Date.now();
+          results[id] = ev.result;
+          updateCard(ev.lane);
+          renderLane(id, true);
+        } else if (ev.t === 'error') {
+          if (ev.lane) {
+            const id = idOf(ev.lane, runMode, job.id);
+            results[id] = { _err: true, _msg: ev.msg || '未知错误', _t: Date.now() };
+            updateCard(ev.lane);
+            renderLane(id, true);
+          } else {
+            throw new Error(ev.msg || '服务器错误');
+          }
+        } else if (ev.t === 'finish') {
+          clearInterval(timerId);
+        }
+      }
+    }
+  } catch (e) {
+    clearInterval(timerId);
+    $('#err').textContent = '分离失败：' + e.message;
+    $('#err').classList.add('show');
+  } finally {
+    clearInterval(timerId);
+    if (runQueue.length) {
+      $('#spintxt').innerHTML = '上一任务完成，准备运行下一个任务<span id="elapsed"></span>';
+    } else {
+      $('#progress').classList.remove('show');
+    }
+  }
+}
+
+function mergeDisplay(si) {
+  const out = [];
+  for (const s of si) {
+    const last = out[out.length - 1];
+    if (last && !last.overlap && !s.overlap && last.spk === s.spk &&
+        (s.start - last.end) <= 0.5) {
+      last.end = s.end;
+      if ((s.text || '').trim()) last.text = ((last.text || '') + ' ' + s.text).trim();
+      if (typeof s.speech_sec === 'number') {
+        last.speech_sec = (typeof last.speech_sec === 'number' ? last.speech_sec : 0) + s.speech_sec;
+      }
+      if (s.lab_src === 'baseline') last.lab_src = 'baseline';
+      if (typeof s.hole_sec === 'number') {
+        last.hole_sec = Math.max(typeof last.hole_sec === 'number' ? last.hole_sec : 0, s.hole_sec);
+      }
+    } else {
+      out.push({ start: s.start, end: s.end, spk: s.spk, spks: s.spks,
+                 overlap: s.overlap, text: s.text, speech_sec: s.speech_sec,
+                 lab_src: s.lab_src, hole_sec: s.hole_sec });
+    }
+  }
+  return out;
+}
+
+function turnText(s) {
+  // 空文本条目的显示：不再写"（无声段）"——那只是转写失败的占位符。
+  // 后端给了 speech_sec（有效语音秒数）就把证据摆出来：有语音=ASR 失败，没语音=真静音。
+  const t = (s.text || '').trim();
+  if (t) return esc(t);
+  const muted = x => '<span style="color:var(--text-3)">' + x + '</span>';
+  const sec = (typeof s.speech_sec === 'number') ? s.speech_sec : null;
+  if (sec === null) return muted('（未识别出文字）');
+  if (sec >= 0.4) return muted('（有语音 ' + sec.toFixed(1) + 's，未识别出文字）');
+  return muted('（几乎没有语音 ' + sec.toFixed(1) + 's）');
+}
+
+function lowConfBadges(s) {
+  // 低置信标注（§35）：不让系统把"没有证据的段"当确定的单人段展示。
+  //   lab_src=baseline → 该条目没用自己的声纹证据，标签继承自 A2 基线分割；
+  //   hole_sec ≥1s     → 条目跨过一段完全没有致密窗（VAD 未给段）的区域。
+  let h = '';
+  if (s.lab_src === 'baseline') {
+    h += '<span class="badge-low" title="本条目的标签来自基线分割，本流水线在该段没有局部声纹证据">无局部证据</span>';
+  }
+  if (typeof s.hole_sec === 'number' && s.hole_sec >= 1.0) {
+    h += '<span class="badge-low" title="条目内有一段没有致密窗的区域（VAD 未给段），该段没有任何声纹证据">跨 ' +
+         s.hole_sec.toFixed(1) + 's 未检测区</span>';
+  }
+  return h;
+}
+
+function turnHtml(s) {
+  const ovl = !!(s.overlap && Array.isArray(s.spks));
+  const spkEl = ovl
+    ? '<span class="spk dual">speaker_' + s.spks.join('+') + '</span>'
+    : '<span class="spk" style="background:' + SPK_COLORS[(s.spk ?? 0) % 8] + '">speaker_' + s.spk + '</span>';
+  return '<div class="turn' + (ovl ? ' ovl' : '') + '">' + spkEl +
+    '<div class="body"><div class="ts">' + fmt(s.start) + ' - ' + fmt(s.end) +
+    (ovl ? ' <span class="badge-ovl">同时</span>' : '') + lowConfBadges(s) + '</div>' +
+    '<div class="txt">' + turnText(s) + '</div></div></div>';
+}
+
+function bodyHtml(id) {
+  const r = results[id];
+  if (!r) return '<div class="lane-empty">未运行。</div>';
+  if (r._err) return '<div class="lane-error">运行失败：' + esc(r._msg) + '</div>';
+  const si = mergeDisplay(r.sentence_info || []);
+  if (!si.length) return '<div class="lane-empty">本次运行未返回可展示的语句。</div>' + laneActionsHtml(id);
+  const spkSet = new Set();
+  si.forEach(s => { if (s.spk != null) spkSet.add(s.spk); (s.spks || []).forEach(k => spkSet.add(k)); });
+  const spks = [...spkSet].sort((a, b) => a - b);
+  const stats = spks.map(k => {
+    const its = si.filter(s => s.spk === k || (s.spks || []).includes(k));
+    const dur = its.reduce((a, s) => a + Math.max(0, (s.end || 0) - (s.start || 0)), 0);
+    return { k, n: its.length, dur };
+  });
+  return (
+    '<div class="lane-legend">' + stats.map(s =>
+      '<span class="lg"><span class="dot" style="background:' + SPK_COLORS[s.k % 8] + '"></span>' +
+      'speaker_' + s.k + '，' + s.n + ' 句，' + fmt(s.dur) + '</span>').join('') +
+    '</div>' +
+    '<div class="lane-turns">' + si.map(s => turnHtml(s)).join('') + '</div>' +
+    laneActionsHtml(id)
+  );
+}
+
+function laneActionsHtml(id) {
+  return '<div class="lane-foot">' +
+    '<button class="mini-run" type="button" onclick="llmCorrect(\'' + id + '\')">LLM 校正</button>' +
+    '<button class="mini-run" type="button" onclick="exportJson(\'' + id + '\')">导出 JSON</button>' +
+  '</div>';
+}
+
+function laneInit(id) {
+  const meta = lanes.find(l => l.key === keyOf(id));
+  if (!meta) return;
+  const fileMeta = resultMeta[id];
+  const el = document.createElement('section');
+  const bodyId = 'lane-body-' + id;
+  el.className = 'lane';
+  el.id = 'lane-' + id;
+  el.innerHTML =
+    '<button type="button" class="lane-head" aria-expanded="false" aria-controls="' + bodyId + '" onclick="toggleLane(\'' + id + '\')">' +
+      '<span class="lane-heading">' +
+        '<span class="lane-title">' + esc(meta.label) + '</span>' +
+        '<span class="lane-mode">' + esc(MODE_NAMES[modeOf(id)] || modeOf(id)) + '</span>' +
+        (fileMeta && fileMeta.fileName ? '<span class="lane-mode">' + esc(fileMeta.fileName) + '</span>' : '') +
+        '<span class="who ' + meta.kind + '">' + (meta.kind === 'dsh' ? '我方' : 'Claude') + '</span>' +
+      '</span>' +
+      '<span class="badges"></span>' +
+      '<span class="lane-arrow" aria-hidden="true"></span>' +
+    '</button>' +
+    '<div class="lane-body" id="' + bodyId + '" role="region" aria-label="' + esc(meta.label) + '结果"></div>';
+  $('#compare').appendChild(el);
+}
+
+function removeLane(id) {
+  const el = document.getElementById('lane-' + id);
+  if (el) el.remove();
+}
+
+function setLaneOpen(box, open) {
+  box.classList.toggle('open', open);
+  const head = box.querySelector('.lane-head');
+  if (head) head.setAttribute('aria-expanded', String(open));
+}
+
+function renderLane(id, openNew) {
+  if (!document.getElementById('lane-' + id)) laneInit(id);
+  const box = document.getElementById('lane-' + id);
+  if (!box) return;
+  const d = results[id];
+  const badges = box.querySelector('.badges');
+  const body = box.querySelector('.lane-body');
+  if (!d) {
+    badges.innerHTML = '<span class="badge">未运行</span>';
+    body.innerHTML = bodyHtml(id);
+    return;
+  }
+  if (d._err) {
+    badges.innerHTML = '<span class="badge error">运行失败</span>';
+    body.innerHTML = bodyHtml(id);
+    setLaneOpen(box, true);
+    return;
+  }
+  const ok = d.verdict === 'reliable';
+  // v8 起 verdict 是算出来的三态，reasons 说明为什么不可靠（人数不确定 /
+  // 文本可疑 / 短段未解码）。有就显示；v7 恒 reliable，不显示。
+  const vrs = (d.verdict_reasons || []).filter(Boolean);
+  const vrB = (!ok && vrs.length)
+    ? '<span class="badge warn" title="' + esc(vrs.join('；')) + '">' +
+        esc(vrs[0].slice(0, 20)) + (vrs.length > 1 ? '…' : '') + '</span>'
+    : '';
+  const nspkB = (d.diag && d.diag.n_speakers !== undefined)
+    ? '<span class="badge info">人数 ' + esc(String(d.diag.n_speakers)) + '</span>' : '';
+  const envB = d.env ? '<span class="badge ' + (d.env.verdict === '嘈杂' ? 'warn' : 'info') + '">' +
+    (d.env.verdict === '嘈杂' ? '嘈杂，' + d.env.noise_db + 'dB，已降噪' :
+                                '安静，' + d.env.noise_db + 'dB') + '</span>' : '';
+  badges.innerHTML =
+    '<span class="badge info">' + esc(d.method || '') + '</span>' +
+    '<span class="badge">耗时 ' + d.elapsed + 's</span>' +
+    '<span class="badge ' + (ok ? 'ok' : 'warn') + '">' +
+      (ok ? '可靠' : '待核验') + '</span>' + vrB + nspkB + envB;
+  body.innerHTML = bodyHtml(id);
+  if (openNew !== undefined) setLaneOpen(box, openNew);
+}
+
+function toggleLane(id) {
+  const el = document.getElementById('lane-' + id);
+  if (el) setLaneOpen(el, !el.classList.contains('open'));
+}
+
+async function llmCorrect(id) {
+  const d = results[id];
+  if (!d || d._err) return;
+  $('#progress').classList.add('show');
+  $('#spintxt').innerHTML = '正在调用 DeepSeek 进行校正<span id="elapsed"></span>';
+  startTimer();
+  try {
+    const res = await fetch('/api/llm', { method: 'POST', body: JSON.stringify(d) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 1);
+        if (!line) continue;
+        let ev;
+        try { ev = JSON.parse(line); } catch (e) { continue; }
+        if (ev.t === 'progress') {
+          $('#spintxt').innerHTML = esc(ev.msg) + '<span id="elapsed"></span>';
+        } else if (ev.t === 'done') {
+          clearInterval(timerId);
+          ev.result._t = Date.now();
+          results[id] = ev.result;
+          updateCard(keyOf(id));
+          renderLane(id, true);
+        } else if (ev.t === 'error') {
+          throw new Error(ev.msg || '服务器错误');
+        }
+      }
+    }
+  } catch (e) {
+    clearInterval(timerId);
+    $('#err').textContent = 'LLM 校正失败：' + e.message;
+    $('#err').classList.add('show');
+  } finally {
+    clearInterval(timerId);
+    $('#progress').classList.remove('show');
+  }
+}
+
+function exportJson(id) {
+  const d = results[id];
+  if (!d || d._err) return;
+  const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'diar_result_' + id + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 0);
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+loadLanes();
+</script>
+</body>
+</html>

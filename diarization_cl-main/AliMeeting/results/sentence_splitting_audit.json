@@ -1,0 +1,580 @@
+{
+  "config": {
+    "corpus": "AliMeeting Eval",
+    "thresh_main": 0.1,
+    "thresh_strict": 0.3,
+    "note": "切句 = 预测在一句内覆盖 >=2 个说话人；无需模型，只读真值+句表+已有预测"
+  },
+  "rows": [
+    {
+      "meeting": "R8001_M8004",
+      "arm": "v12",
+      "n_sentences": 604,
+      "split": 0,
+      "single": 596,
+      "no_pred": 8,
+      "correct": 272,
+      "n_pred_speakers": 1,
+      "n_truth_speakers": 4,
+      "split_examples": [],
+      "split_rate": 0.0,
+      "acc_single": 0.4563758389261745
+    },
+    {
+      "meeting": "R8001_M8004",
+      "arm": "baseline",
+      "n_sentences": 604,
+      "split": 107,
+      "single": 440,
+      "no_pred": 57,
+      "correct": 130,
+      "n_pred_speakers": 5,
+      "n_truth_speakers": 4,
+      "split_examples": [
+        {
+          "start": 23.65,
+          "end": 24.43,
+          "truth": "N_SPK8013",
+          "pred": {
+            "base_1": 0.551,
+            "base_6": 0.449
+          }
+        },
+        {
+          "start": 23.7,
+          "end": 24.04,
+          "truth": "N_SPK8014",
+          "pred": {
+            "base_6": 0.882,
+            "base_1": 0.118
+          }
+        },
+        {
+          "start": 66.72,
+          "end": 81.83,
+          "truth": "N_SPK8015",
+          "pred": {
+            "base_2": 0.801,
+            "base_6": 0.199
+          }
+        }
+      ],
+      "split_rate": 0.1771523178807947,
+      "acc_single": 0.29545454545454547
+    },
+    {
+      "meeting": "R8003_M8001",
+      "arm": "v12",
+      "n_sentences": 674,
+      "split": 155,
+      "single": 509,
+      "no_pred": 10,
+      "correct": 211,
+      "n_pred_speakers": 3,
+      "n_truth_speakers": 4,
+      "split_examples": [
+        {
+          "start": 54.33,
+          "end": 62.1,
+          "truth": "N_SPK8002",
+          "pred": {
+            "v12_2": 0.792,
+            "v12_1": 0.208
+          }
+        },
+        {
+          "start": 90.46,
+          "end": 90.94,
+          "truth": "N_SPK8004",
+          "pred": {
+            "v12_2": 0.708,
+            "v12_1": 0.292
+          }
+        },
+        {
+          "start": 96.75,
+          "end": 110.28,
+          "truth": "N_SPK8001",
+          "pred": {
+            "v12_1": 0.732,
+            "v12_2": 0.246
+          }
+        }
+      ],
+      "split_rate": 0.22997032640949555,
+      "acc_single": 0.41453831041257366
+    },
+    {
+      "meeting": "R8003_M8001",
+      "arm": "baseline",
+      "n_sentences": 674,
+      "split": 51,
+      "single": 588,
+      "no_pred": 35,
+      "correct": 206,
+      "n_pred_speakers": 3,
+      "n_truth_speakers": 4,
+      "split_examples": [
+        {
+          "start": 54.33,
+          "end": 62.1,
+          "truth": "N_SPK8002",
+          "pred": {
+            "base_1": 0.644,
+            "base_2": 0.356
+          }
+        },
+        {
+          "start": 108.81,
+          "end": 119.62,
+          "truth": "N_SPK8002",
+          "pred": {
+            "base_1": 0.463,
+            "base_2": 0.352
+          }
+        },
+        {
+          "start": 197.83,
+          "end": 209.61,
+          "truth": "N_SPK8002",
+          "pred": {
+            "base_2": 0.66,
+            "base_1": 0.34
+          }
+        }
+      ],
+      "split_rate": 0.07566765578635015,
+      "acc_single": 0.35034013605442177
+    },
+    {
+      "meeting": "R8007_M8010",
+      "arm": "v12",
+      "n_sentences": 1181,
+      "split": 0,
+      "single": 1181,
+      "no_pred": 0,
+      "correct": 262,
+      "n_pred_speakers": 1,
+      "n_truth_speakers": 4,
+      "split_examples": [],
+      "split_rate": 0.0,
+      "acc_single": 0.2218458933107536
+    },
+    {
+      "meeting": "R8007_M8010",
+      "arm": "baseline",
+      "n_sentences": 1181,
+      "split": 0,
+      "single": 1181,
+      "no_pred": 0,
+      "correct": 262,
+      "n_pred_speakers": 1,
+      "n_truth_speakers": 4,
+      "split_examples": [],
+      "split_rate": 0.0,
+      "acc_single": 0.2218458933107536
+    },
+    {
+      "meeting": "R8007_M8011",
+      "arm": "v12",
+      "n_sentences": 768,
+      "split": 195,
+      "single": 572,
+      "no_pred": 1,
+      "correct": 191,
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 4,
+      "split_examples": [
+        {
+          "start": 47.46,
+          "end": 49.07,
+          "truth": "N_SPK8066",
+          "pred": {
+            "v12_1": 0.758,
+            "v12_0": 0.242
+          }
+        },
+        {
+          "start": 74.77,
+          "end": 81.47,
+          "truth": "N_SPK8066",
+          "pred": {
+            "v12_0": 0.84,
+            "v12_1": 0.115
+          }
+        },
+        {
+          "start": 81.72,
+          "end": 89.38,
+          "truth": "N_SPK8067",
+          "pred": {
+            "v12_1": 0.709,
+            "v12_0": 0.252
+          }
+        }
+      ],
+      "split_rate": 0.25390625,
+      "acc_single": 0.3339160839160839
+    },
+    {
+      "meeting": "R8007_M8011",
+      "arm": "baseline",
+      "n_sentences": 768,
+      "split": 82,
+      "single": 668,
+      "no_pred": 18,
+      "correct": 196,
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 4,
+      "split_examples": [
+        {
+          "start": 66.07,
+          "end": 74.92,
+          "truth": "N_SPK8067",
+          "pred": {
+            "base_1": 0.896,
+            "base_0": 0.104
+          }
+        },
+        {
+          "start": 74.77,
+          "end": 81.47,
+          "truth": "N_SPK8066",
+          "pred": {
+            "base_0": 0.781,
+            "base_1": 0.219
+          }
+        },
+        {
+          "start": 81.72,
+          "end": 89.38,
+          "truth": "N_SPK8067",
+          "pred": {
+            "base_1": 0.82,
+            "base_0": 0.18
+          }
+        }
+      ],
+      "split_rate": 0.10677083333333333,
+      "acc_single": 0.2934131736526946
+    },
+    {
+      "meeting": "R8008_M8013",
+      "arm": "v12",
+      "n_sentences": 732,
+      "split": 89,
+      "single": 600,
+      "no_pred": 43,
+      "correct": 225,
+      "n_pred_speakers": 3,
+      "n_truth_speakers": 3,
+      "split_examples": [
+        {
+          "start": 123.52,
+          "end": 133.89,
+          "truth": "N_SPK8047",
+          "pred": {
+            "v12_0": 0.782,
+            "v12_1": 0.218
+          }
+        },
+        {
+          "start": 153.12,
+          "end": 156.07,
+          "truth": "N_SPK8047",
+          "pred": {
+            "v12_0": 0.875,
+            "v12_1": 0.125
+          }
+        },
+        {
+          "start": 159.28,
+          "end": 160.7,
+          "truth": "N_SPK8047",
+          "pred": {
+            "v12_1": 0.648,
+            "v12_0": 0.352
+          }
+        }
+      ],
+      "split_rate": 0.12158469945355191,
+      "acc_single": 0.375
+    },
+    {
+      "meeting": "R8008_M8013",
+      "arm": "baseline",
+      "n_sentences": 732,
+      "split": 1,
+      "single": 300,
+      "no_pred": 431,
+      "correct": 103,
+      "n_pred_speakers": 3,
+      "n_truth_speakers": 3,
+      "split_examples": [
+        {
+          "start": 55.02,
+          "end": 56.75,
+          "truth": "N_SPK8049",
+          "pred": {
+            "base_0": 0.566,
+            "base_2": 0.434
+          }
+        }
+      ],
+      "split_rate": 0.001366120218579235,
+      "acc_single": 0.3433333333333333
+    },
+    {
+      "meeting": "R8009_M8018",
+      "arm": "v12",
+      "n_sentences": 665,
+      "split": 101,
+      "single": 559,
+      "no_pred": 5,
+      "correct": 439,
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 2,
+      "split_examples": [
+        {
+          "start": 1.34,
+          "end": 2.24,
+          "truth": "N_SPK8022",
+          "pred": {
+            "v12_0": 0.822,
+            "v12_1": 0.178
+          }
+        },
+        {
+          "start": 28.96,
+          "end": 30.27,
+          "truth": "N_SPK8021",
+          "pred": {
+            "v12_1": 0.55,
+            "v12_0": 0.45
+          }
+        },
+        {
+          "start": 119.38,
+          "end": 123.1,
+          "truth": "N_SPK8021",
+          "pred": {
+            "v12_0": 0.874,
+            "v12_1": 0.126
+          }
+        }
+      ],
+      "split_rate": 0.1518796992481203,
+      "acc_single": 0.7853309481216458
+    },
+    {
+      "meeting": "R8009_M8018",
+      "arm": "baseline",
+      "n_sentences": 665,
+      "split": 66,
+      "single": 574,
+      "no_pred": 25,
+      "correct": 403,
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 2,
+      "split_examples": [
+        {
+          "start": 34.7,
+          "end": 37.51,
+          "truth": "N_SPK8022",
+          "pred": {
+            "base_1": 0.819,
+            "base_0": 0.181
+          }
+        },
+        {
+          "start": 41.8,
+          "end": 44.58,
+          "truth": "N_SPK8021",
+          "pred": {
+            "base_0": 0.791,
+            "base_1": 0.209
+          }
+        },
+        {
+          "start": 52.12,
+          "end": 54.82,
+          "truth": "N_SPK8022",
+          "pred": {
+            "base_1": 0.696,
+            "base_0": 0.304
+          }
+        }
+      ],
+      "split_rate": 0.09924812030075188,
+      "acc_single": 0.7020905923344948
+    },
+    {
+      "meeting": "R8009_M8019",
+      "arm": "v12",
+      "n_sentences": 959,
+      "split": 135,
+      "single": 823,
+      "no_pred": 1,
+      "correct": 733,
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 2,
+      "split_examples": [
+        {
+          "start": 8.04,
+          "end": 9.86,
+          "truth": "N_SPK8024",
+          "pred": {
+            "v12_0": 0.857,
+            "v12_1": 0.143
+          }
+        },
+        {
+          "start": 21.04,
+          "end": 22.7,
+          "truth": "N_SPK8023",
+          "pred": {
+            "v12_1": 0.88,
+            "v12_0": 0.12
+          }
+        },
+        {
+          "start": 21.98,
+          "end": 23.24,
+          "truth": "N_SPK8024",
+          "pred": {
+            "v12_0": 0.587,
+            "v12_1": 0.413
+          }
+        }
+      ],
+      "split_rate": 0.14077163712200208,
+      "acc_single": 0.8906439854191981
+    },
+    {
+      "meeting": "R8009_M8019",
+      "arm": "baseline",
+      "n_sentences": 959,
+      "split": 52,
+      "single": 881,
+      "no_pred": 26,
+      "correct": 724,
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 2,
+      "split_examples": [
+        {
+          "start": 8.04,
+          "end": 9.86,
+          "truth": "N_SPK8024",
+          "pred": {
+            "base_1": 0.527,
+            "base_0": 0.473
+          }
+        },
+        {
+          "start": 21.98,
+          "end": 23.24,
+          "truth": "N_SPK8024",
+          "pred": {
+            "base_0": 0.81,
+            "base_1": 0.19
+          }
+        },
+        {
+          "start": 53.88,
+          "end": 55.88,
+          "truth": "N_SPK8024",
+          "pred": {
+            "base_1": 0.56,
+            "base_0": 0.44
+          }
+        }
+      ],
+      "split_rate": 0.054223149113660066,
+      "acc_single": 0.8217934165720772
+    },
+    {
+      "meeting": "R8009_M8020",
+      "arm": "v12",
+      "n_sentences": 874,
+      "split": 105,
+      "single": 767,
+      "no_pred": 2,
+      "correct": 650,
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 2,
+      "split_examples": [
+        {
+          "start": 19.5,
+          "end": 21.02,
+          "truth": "N_SPK8025",
+          "pred": {
+            "v12_1": 0.888,
+            "v12_0": 0.112
+          }
+        },
+        {
+          "start": 57.3,
+          "end": 58.67,
+          "truth": "N_SPK8025",
+          "pred": {
+            "v12_1": 0.657,
+            "v12_0": 0.343
+          }
+        },
+        {
+          "start": 88.62,
+          "end": 89.39,
+          "truth": "N_SPK8026",
+          "pred": {
+            "v12_0": 0.623,
+            "v12_1": 0.377
+          }
+        }
+      ],
+      "split_rate": 0.12013729977116705,
+      "acc_single": 0.847457627118644
+    },
+    {
+      "meeting": "R8009_M8020",
+      "arm": "baseline",
+      "n_sentences": 874,
+      "split": 55,
+      "single": 807,
+      "no_pred": 12,
+      "correct": 650,
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 2,
+      "split_examples": [
+        {
+          "start": 45.75,
+          "end": 47.81,
+          "truth": "N_SPK8026",
+          "pred": {
+            "base_1": 0.85,
+            "base_0": 0.15
+          }
+        },
+        {
+          "start": 58.11,
+          "end": 63.04,
+          "truth": "N_SPK8026",
+          "pred": {
+            "base_1": 0.819,
+            "base_0": 0.181
+          }
+        },
+        {
+          "start": 65.29,
+          "end": 69.02,
+          "truth": "N_SPK8026",
+          "pred": {
+            "base_1": 0.727,
+            "base_0": 0.273
+          }
+        }
+      ],
+      "split_rate": 0.06292906178489703,
+      "acc_single": 0.80545229244114
+    }
+  ]
+}

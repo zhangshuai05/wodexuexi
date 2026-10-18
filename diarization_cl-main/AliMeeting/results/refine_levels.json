@@ -1,0 +1,75 @@
+{
+  "config": {
+    "note": "L1=最近质心判定；L2=+_stabilize_labels；L3=+_absorb_slivers（现状）。窗级acc只统计窗内单人的可标窗"
+  },
+  "rows": [
+    {
+      "meeting": "R8008_M8013",
+      "k_main": 3,
+      "n_refine_windows": 4480,
+      "n_main_chunks": 2127,
+      "churn_L1_L2": 78,
+      "churn_L2_L3": 1,
+      "churn_L1_L3": 79,
+      "levels": {
+        "no_refine": {
+          "sent_acc": 0.505464480874317,
+          "win_acc": null
+        },
+        "L1_assign": {
+          "sent_acc": 0.4098360655737705,
+          "win_acc": 0.9505703422053232,
+          "n_labelled_windows": 3682,
+          "coverage": 0.51775956284153
+        },
+        "L2_stabilize": {
+          "sent_acc": 0.4030054644808743,
+          "win_acc": 0.9636067354698533,
+          "n_labelled_windows": 3682,
+          "coverage": 0.51775956284153
+        },
+        "L3_absorb": {
+          "sent_acc": 0.4030054644808743,
+          "win_acc": 0.9638783269961977,
+          "n_labelled_windows": 3682,
+          "coverage": 0.51775956284153
+        }
+      },
+      "elapsed_s": 127.8
+    },
+    {
+      "meeting": "R8007_M8011",
+      "k_main": 4,
+      "n_refine_windows": 12294,
+      "n_main_chunks": 1708,
+      "churn_L1_L2": 148,
+      "churn_L2_L3": 4,
+      "churn_L1_L3": 152,
+      "levels": {
+        "no_refine": {
+          "sent_acc": 0.3815104166666667,
+          "win_acc": null
+        },
+        "L1_assign": {
+          "sent_acc": 0.5130208333333334,
+          "win_acc": 0.9833206009676598,
+          "n_labelled_windows": 7854,
+          "coverage": 1.0
+        },
+        "L2_stabilize": {
+          "sent_acc": 0.5130208333333334,
+          "win_acc": 0.9894321364909601,
+          "n_labelled_windows": 7854,
+          "coverage": 1.0
+        },
+        "L3_absorb": {
+          "sent_acc": 0.5130208333333334,
+          "win_acc": 0.9895594601476955,
+          "n_labelled_windows": 7854,
+          "coverage": 1.0
+        }
+      },
+      "elapsed_s": 216.6
+    }
+  ]
+}

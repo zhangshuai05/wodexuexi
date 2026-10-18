@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AISHELL-4 分离测试台 · v12</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#141922; --panel-2:#171d27; --rule:#232b36; --rule-soft:#1c232d;
+    --fg:#e7ecf2; --fg-mute:#9aa5b4; --fg-faint:#8893a3;
+    --accent:#5eead4; --warn:#fbbf24; --bad:#fb7185;
+    /* 说话人配色：8 个色相，够 AISHELL-4 的 7 人；未匹配的簇落回灰 */
+    --s0:#5eead4; --s1:#fbbf24; --s2:#a78bfa; --s3:#4ade80;
+    --s4:#fb7185; --s5:#60a5fa; --s6:#f97316; --s7:#e879f9;
+    --unmatched:#5b6573;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    --lane-h:16px; --gutter:72px;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--fg); font:14px/1.5 var(--sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:#1e3a3a;color:var(--fg)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+  button,input{font:inherit;color:inherit}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#2a333f;border-radius:6px;border:2px solid var(--bg)}
+  ::-webkit-scrollbar-thumb:hover{background:#38434f}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ── 骨架 ─────────────────────────────────────────────── */
+  body{display:grid;grid-template-rows:auto 1fr;height:100vh;overflow:hidden}
+  header{
+    display:flex;align-items:baseline;gap:14px;padding:14px 20px;
+    border-bottom:1px solid var(--rule);background:var(--panel);
+  }
+  header h1{margin:0;font-size:15px;font-weight:600;letter-spacing:-0.01em}
+  header .meta{color:var(--fg-mute);font-size:12px}
+  header .grow{flex:1}
+  header .model{font:12px/1.4 var(--mono);color:var(--fg-faint)}
+  header .model b{color:var(--fg-mute);font-weight:400}
+
+  main{display:grid;grid-template-columns:300px minmax(0,1fr) 340px;min-height:0}
+  aside.transcript{display:flex;flex-direction:column;overflow:hidden}
+  aside.transcript h2{display:flex;align-items:center;gap:8px}
+  .live{width:7px;height:7px;border-radius:50%;background:var(--fg-faint)}
+  .live.on{background:var(--accent);animation:pulse 1.6s ease-in-out infinite}
+  .live.err{background:var(--bad);animation:none}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .asr{list-style:none;margin:0;padding:0;overflow:auto;flex:1;min-height:0}
+  .asr li{
+    display:grid;grid-template-columns:44px 1fr;gap:10px;padding:5px 0;
+    border-bottom:1px solid var(--rule-soft);color:var(--fg-mute);
+  }
+  .asr li.now{color:var(--fg)}
+  .asr time{font:11px/1.7 var(--mono);color:var(--fg-faint);font-variant-numeric:tabular-nums;padding-top:1px}
+  .asr span{overflow-wrap:anywhere;line-height:1.7}
+  .asr .idle{grid-template-columns:1fr;color:var(--fg-faint)}
+  .asr-note{margin:8px 0 0;color:var(--fg-faint);font-size:12px;line-height:1.6}
+  aside{
+    border-right:1px solid var(--rule);background:var(--panel);overflow:hidden;padding:16px;
+    display:flex;flex-direction:column;gap:18px;
+  }
+  aside>section:first-child{flex:1;min-height:200px;display:flex;flex-direction:column}
+  aside>section:last-child{display:flex;flex-direction:column;max-height:168px}
+  .meetings{overflow:auto;min-height:0}
+  aside h2{
+    margin:0 0 10px;font-size:11px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--fg-faint);
+  }
+
+  /* ── 场次列表 ─────────────────────────────────────────── */
+  .meetings{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+  .meetings button{
+    width:100%;display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;
+    padding:5px 9px;background:transparent;border:0;border-radius:6px;cursor:pointer;text-align:left;
+  }
+  .meetings button:hover{background:var(--panel-2)}
+  .meetings button[aria-pressed="true"]{background:#1b2733;box-shadow:inset 2px 0 0 var(--accent)}
+  .meetings .id{font:12px/1.4 var(--mono);letter-spacing:-0.02em;overflow:hidden;text-overflow:ellipsis}
+  .meetings .facts{font:11px/1.4 var(--mono);color:var(--fg-faint);font-variant-numeric:tabular-nums}
+  .split{
+    font:11px/1.6 var(--mono);color:var(--fg-faint);border:1px solid var(--rule);
+    border-radius:3px;padding:0 4px;margin-left:6px;
+  }
+  .split.dev{color:var(--accent);border-color:#2a4a48}
+  .split.holdout{color:var(--warn);border-color:#4a3d1e}
+
+  /* ── 运行 ─────────────────────────────────────────────── */
+  .field{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .field label{color:var(--fg-mute);font-size:12px;min-width:52px}
+  .field input{
+    width:100%;background:var(--bg);border:1px solid var(--rule);border-radius:6px;
+    padding:6px 9px;font:13px var(--mono);font-variant-numeric:tabular-nums;
+  }
+  .field input:disabled{opacity:.5}
+  .presets{display:flex;gap:6px;margin:-2px 0 12px 60px}
+  .presets button{
+    background:transparent;border:1px solid var(--rule);border-radius:20px;
+    padding:2px 10px;font-size:11px;color:var(--fg-mute);cursor:pointer;
+  }
+  .presets button:hover{color:var(--fg);border-color:#33404e}
+  #run{
+    width:100%;padding:9px 14px;border:1px solid #2f6b62;border-radius:8px;
+    background:#12312e;color:#c9fff5;font-weight:600;cursor:pointer;
+    transition:background .18s cubic-bezier(.16,1,.3,1),border-color .18s;
+  }
+  #run:hover:not(:disabled){background:#164039;border-color:#3f8b7f}
+  #run:disabled{cursor:not-allowed;opacity:.55;background:#161d24;border-color:var(--rule);color:var(--fg-faint)}
+  .hint{margin:10px 0 0;color:var(--fg-faint);font-size:12px;line-height:1.6}
+
+  .log{list-style:none;margin:0;padding:0;font:12px/1.7 var(--mono);color:var(--fg-mute);overflow:auto;min-height:0}
+  .log li{overflow-wrap:anywhere}
+  .log li:last-child{color:var(--fg)}
+  .log li::before{content:"› ";color:var(--fg-faint)}
+  .log .err{color:var(--bad)}
+  .log .err::before{content:"! ";color:var(--bad)}
+
+  /* ── 舞台 ─────────────────────────────────────────────── */
+  .stage{overflow:auto;padding:20px 24px 40px;min-width:0}
+  .empty{
+    display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+    gap:8px;height:50vh;max-width:52ch;color:var(--fg-mute);
+  }
+  .empty[hidden]{display:none}
+  .empty strong{color:var(--fg);font-weight:600;font-size:16px}
+
+  .summary{display:flex;flex-wrap:wrap;gap:0 30px;margin:0 0 20px;padding-bottom:16px;
+    border-bottom:1px solid var(--rule)}
+  .summary div{display:flex;flex-direction:column;gap:2px}
+  .summary dt,.summary .k{font-size:11px;color:var(--fg-faint);letter-spacing:.04em}
+  .summary .v{font:15px/1.3 var(--mono);font-variant-numeric:tabular-nums}
+  .summary .v small{font-size:11px;color:var(--fg-faint)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 14px;font-size:12px;color:var(--fg-mute)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+  .grid{display:grid;grid-template-columns:var(--gutter) 1fr;align-items:center}
+  .group-label{
+    grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:16px 0 8px;
+    font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);
+  }
+  .group-label::after{content:"";flex:1;height:1px;background:var(--rule)}
+  .group-label em{font-style:normal;text-transform:none;letter-spacing:0;font-family:var(--mono)}
+
+  .ruler{position:relative;height:18px;border-bottom:1px solid var(--rule-soft)}
+  .ruler i{position:absolute;top:0;bottom:0;width:1px;background:var(--rule-soft)}
+  .ruler b{
+    position:absolute;top:2px;font:11px var(--mono);font-weight:400;color:var(--fg-faint);
+    font-variant-numeric:tabular-nums;transform:translateX(3px);
+  }
+  .ruler b.end{transform:translateX(-100%)}
+  .lane-name{
+    font:12px var(--mono);color:var(--fg-mute);padding-right:10px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .track{position:relative;height:var(--lane-h);margin:2px 0;background:#11161e;border-radius:2px}
+  .blk{position:absolute;top:0;bottom:0;border-radius:2px;transform-origin:left center}
+  .wipe .blk{animation:wipe .5s cubic-bezier(.16,1,.3,1) both}
+  @keyframes wipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  .unmatched .blk{border:1px dashed var(--unmatched)}
+  .swatch.unmatched{background:transparent;border:1px dashed var(--unmatched)}
+
+  .playhead{
+    position:absolute;top:0;bottom:0;width:1px;background:var(--fg);opacity:.85;
+    pointer-events:none;box-shadow:0 0 6px rgba(231,236,242,.35);
+  }
+  .ruler,.track{cursor:crosshair}
+  .tracklayer{position:relative}
+
+  audio{width:100%;margin:20px 0 8px;height:34px;color-scheme:dark}
+
+  table{border-collapse:collapse;width:100%;max-width:820px;margin-top:8px;font-size:12.5px}
+  th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule-soft)}
+  th{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--fg-faint)}
+  td.num{font:12.5px var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+  tbody tr:hover{background:var(--panel-2)}
+  .tag{font:11px var(--mono);color:var(--fg-faint)}
+  .tag.warn{color:var(--warn)}
+  .doc{margin:26px 0 0;padding-top:16px;border-top:1px solid var(--rule);
+    color:var(--fg-faint);font-size:12px;max-width:70ch}
+
+  @media (max-width:1200px){
+    main{grid-template-columns:280px minmax(0,1fr)}
+    aside.transcript{grid-column:1/-1;border-top:1px solid var(--rule);border-right:0;max-height:240px}
+  }
+  @media (max-width:900px){
+    body{overflow:auto;height:auto}
+    main{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:1px solid var(--rule);overflow:visible;max-height:none}
+    aside>section:first-child{min-height:0}
+    .meetings{max-height:46vh}
+    .log{max-height:160px}
+    .asr{max-height:240px}
+    .stage{padding:16px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>AISHELL-4 分离测试台</h1>
+  <span class="meta">v12 · 2.0 s 定身份 + 0.6 s 找边界</span>
+  <span class="grow"></span>
+  <span class="model" id="model">模型<b>未加载</b></span>
+</header>
+
+<main>
+  <aside>
+    <section>
+      <h2>场次（test，20 场）</h2>
+      <ul class="meetings" id="meetings"></ul>
+    </section>
+
+    <section>
+      <h2>分析区间</h2>
+      <div class="field">
+        <label for="seconds">前</label>
+        <input id="seconds" type="number" min="30" max="3600" step="30" value="600">
+      </div>
+      <div class="presets">
+        <button data-seconds="300">300 s</button>
+        <button data-seconds="600">600 s</button>
+        <button data-seconds="0">整场</button>
+      </div>
+      <button id="run" disabled>运行 v12</button>
+      <p class="hint">只做分离，不跑转写。真值取 RTTM，DER 口径 collar 0.25 s / union 分母。</p>
+    </section>
+
+    <section>
+      <h2>进度</h2>
+      <ul class="log" id="log"><li>等待运行</li></ul>
+    </section>
+  </aside>
+
+  <section class="stage">
+    <div class="empty" id="empty">
+      <strong>选一场会议，运行 v12。</strong>
+      <p>跑完这里会出现两条共用一把时间尺的轨迹：上面是真值，下面是算法。预测簇按它匹配到的真值人上色，错分的地方就是颜色对不上的地方。点轨迹可以跳到音频对应位置。</p>
+    </div>
+    <div id="result" hidden></div>
+  </section>
+
+  <aside class="transcript">
+    <h2><i class="live" id="live"></i>流式转写</h2>
+    <ol class="asr" id="asr"><li class="idle">运行后逐句上屏。这是 FunASR paraformer-streaming 在 CPU 上的草稿，与下面的分离结果**不做对齐**。</li></ol>
+    <p class="asr-note" id="asr-note"></p>
+  </aside>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SPEAKER_COLORS = ["--s0","--s1","--s2","--s3","--s4","--s5","--s6","--s7"];
+const state = {meeting:null, seconds:600, color:new Map(), audio:null};
+
+const fmtTime = (s) => {
+  s = Math.max(0, Math.round(s));
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2,"0")}`;
+};
+const pct = (value, total) => `${(100 * value / total).toFixed(3)}%`;
+
+/* 真值说话人按固定顺序拿色，20 场里同一个人的颜色不会乱跳 */
+function colorFor(speaker){
+  if(!state.color.has(speaker)){
+    const used = state.color.size;
+    state.color.set(speaker, used < SPEAKER_COLORS.length
+      ? getComputedStyle(document.documentElement).getPropertyValue(SPEAKER_COLORS[used]).trim()
+      : "#5b6573");
+  }
+  return state.color.get(speaker);
+}
+
+function logLine(text, kind){
+  const list = $("log");
+  if(list.children.length === 1 && list.textContent.trim() === "等待运行") list.innerHTML = "";
+  const li = document.createElement("li");
+  if(kind) li.className = kind;
+  li.textContent = text;
+  list.append(li);
+  list.scrollTop = list.scrollHeight;
+  while(list.children.length > 40) list.firstChild.remove();
+}
+
+/* ── 流式转写上屏 ─────────────── */
+let lastPieceMs = 0;
+function asrPiece(text, ms){
+  const list = $("asr");
+  if(list.querySelector(".idle")) list.innerHTML = "";
+  let line = list.lastElementChild;
+  // 断行：句子结束标点 / 沉默超过 1.5 秒（流式模型不出标点，只能靠停顿和长度断）
+  const gap = ms - lastPieceMs > 1500;
+  if(!line || line.dataset.done === "1" || gap){
+    line = document.createElement("li");
+    line.innerHTML = `<time>${fmtTime(ms / 1000)}</time><span></span>`;
+    list.append(line);
+    for(const other of list.querySelectorAll("li.now")) other.classList.remove("now");
+    line.classList.add("now");
+  }
+  const body = line.querySelector("span");
+  body.textContent += text;
+  if(/[。！？；]$/.test(text) || body.textContent.length > 34) line.dataset.done = "1";
+  lastPieceMs = ms;
+  const near = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+  if(near) list.scrollTop = list.scrollHeight;
+}
+
+function asrLive(state, note){
+  const dot = $("live");
+  dot.className = "live" + (state ? ` ${state}` : "");
+  $("asr-note").textContent = note || "";
+}
+
+/* ── 场次列表 ───────────────────────────────────────────── */
+async function loadMeetings(){
+  const {meetings} = await (await fetch("/api/meetings")).json();
+  const list = $("meetings");
+  for(const m of meetings){
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("aria-pressed", "false");
+    button.innerHTML =
+      `<span><span class="id">${m.id}</span><span class="split ${m.split}">${m.split}</span></span>
+       <span class="facts">${m.gt_speakers} 人 · ${fmtTime(m.duration)}</span>`;
+    button.onclick = () => {
+      state.meeting = m;
+      for(const other of list.querySelectorAll("button")) other.setAttribute("aria-pressed", "false");
+      button.setAttribute("aria-pressed", "true");
+      $("run").disabled = false;
+      $("run").textContent = `运行 v12 · ${m.id}`;
+    };
+    li.append(button);
+    list.append(li);
+  }
+  logLine(`${meetings.length} 场就绪`);
+}
+
+/* ── 运行 ───────────────────────────────────────────────── */
+async function run(){
+  if(!state.meeting) return;
+  const seconds = Number($("seconds").value) || 0;
+  const full = state.meeting.duration;
+  state.seconds = seconds > 0 ? Math.min(seconds, full) : full;
+
+  $("run").disabled = true;
+  $("log").innerHTML = "";
+  $("asr").innerHTML = "";
+  lastPieceMs = 0;
+  asrLive("on", "正在转写…");
+  logLine(`${state.meeting.id} · 前 ${state.seconds.toFixed(0)} 秒`);
+  try{
+    const response = await fetch(
+      `/api/run?meeting=${state.meeting.id}&seconds=${state.seconds}`, {method:"POST"});
+    if(!response.ok) throw new Error(await response.text());
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for(;;){
+      const {value, done} = await reader.read();
+      if(done) break;
+      buffer += decoder.decode(value, {stream:true});
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+      for(const line of lines){
+        if(!line.trim()) continue;
+        const message = JSON.parse(line);
+        if(message.t === "progress") logLine(message.msg);
+        else if(message.t === "asr") asrPiece(message.text, message.ms);
+        else if(message.t === "asr_done"){
+          asrLive(null, `${message.seconds}s 转完（RTF ${message.rtf}，CPU）`);
+          const line = $("asr").lastElementChild;
+          if(line) line.dataset.done = "1";
+        }
+        else if(message.t === "asr_error") asrLive("err", message.msg);
+        else if(message.t === "error") logLine(message.msg, "err");
+        else if(message.t === "done") render(message.result);
+      }
+    }
+    $("model").innerHTML = "模型 <b>已加载</b>";
+  }catch(error){
+    logLine(String(error.message || error), "err");
+    asrLive("err", "转写已停止");
+  }finally{
+    $("run").disabled = false;
+  }
+}
+
+/* ── 渲染 ───────────────────────────────────────────────── */
+function render(result){
+  const total = result.seconds;
+  const host = $("result");
+  host.hidden = false;
+  $("empty").hidden = true;
+
+  const referenceSpeakers = [...new Set(result.reference.map(s => s.speaker))];
+  state.color = new Map();
+  referenceSpeakers.forEach(colorFor);
+  const pairOf = new Map(result.pairs.map(p => [p.pred, p]));
+  const predicted = [...new Set(result.segments.map(s => `#${s.spk}`))];
+
+  const score = result.score;
+  const summary = [
+    ["DER", score ? `${(score.der * 100).toFixed(2)}%` : "—",
+      score ? `漏 ${(score.miss_rate*100).toFixed(1)} · 虚 ${(score.false_alarm_rate*100).toFixed(1)} · 混 ${(score.confusion_rate*100).toFixed(1)}` : ""],
+    ["人数 k", `${result.k}`, `真值 ${result.gt_k}`],
+    ["路径", result.level, `${result.n_windows} 个窗 · ${result.window_seconds}s/${result.hop_seconds}s`],
+    ["用时", `${result.elapsed}s`, ""],
+  ];
+  const blocks = result.segments.length;
+
+  host.innerHTML = `
+    <div class="summary">
+      ${summary.map(([key, value, note]) =>
+        `<div><span class="k">${key}</span><span class="v">${value}${note ? ` <small>${note}</small>` : ""}</span></div>`).join("")}
+    </div>
+    <div class="legend">
+      ${referenceSpeakers.map(name =>
+        `<span><i class="swatch" style="background:${colorFor(name)}"></i>${name}</span>`).join("")}
+      <span><i class="swatch unmatched"></i>未匹配到真值人</span>
+    </div>
+    <div class="tracklayer" id="tracklayer">
+      <div class="grid"><div></div><div class="ruler" id="ruler"></div></div>
+      <div class="group-label">真值 <em>${result.meeting}.rttm · ${referenceSpeakers.length} 人</em></div>
+      <div id="ref-lanes"></div>
+      <div class="group-label">预测 <em>${blocks} 段 · k=${result.k}</em></div>
+      <div id="pred-lanes"></div>
+    </div>
+    <audio id="audio" controls preload="metadata"
+      src="/api/audio?meeting=${result.meeting}&seconds=${total}"></audio>
+    <table>
+      <thead><tr><th>预测簇</th><th>匹配真值人</th><th class="num">重叠</th><th class="num">纯度</th><th class="num">簇时长</th></tr></thead>
+      <tbody>
+        ${result.pairs.map(p => `
+          <tr>
+            <td><span class="swatch" style="background:${p.ref ? colorFor(p.ref) : "var(--unmatched)"};display:inline-block;margin-right:7px"></span>${p.pred}</td>
+            <td class="tag ${p.ref ? "" : "warn"}">${p.ref || "无对应"}</td>
+            <td class="num">${p.overlap}s</td>
+            <td class="num">${(p.share * 100).toFixed(0)}%</td>
+            <td class="num">${p.pred_seconds}s</td>
+          </tr>`).join("")}
+      </tbody>
+    </table>
+    <p class="doc">纯度 = 该簇与所匹配真值人的重叠秒数 ÷ 该簇总时长。匹配按最长重叠取（与 DER 的 collar 内映射口径不同，只看谁占得最多）。虚线暗纹的簇在真值里找不到对应人。</p>
+  `;
+
+  drawRuler(total);
+  drawLanes("ref-lanes", result.reference, total, (s) => s.speaker);
+  drawLanes("pred-lanes", result.segments, total,
+    (s) => pairOf.get(s.speaker)?.ref);
+  requestAnimationFrame(() => host.querySelectorAll(".track").forEach(
+    t => t.parentElement.classList.add("wipe")));
+
+  state.audio = $("audio");
+  $("tracklayer").addEventListener("click", (event) => {
+    const track = event.target.closest(".ruler, .track");
+    if(!track || !state.audio) return;
+    const box = track.getBoundingClientRect();
+    state.audio.currentTime = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)) * total;
+    state.audio.play();
+  });
+  const playhead = document.createElement("div");
+  playhead.className = "playhead";
+  playhead.hidden = true;
+  $("tracklayer").append(playhead);
+  const move = () => {
+    if(!state.audio.duration) return;
+    playhead.hidden = false;
+    playhead.style.left = `${100 * state.audio.currentTime / total}%`;
+    playhead.style.top = "0"; playhead.style.bottom = "0";
+  };
+  state.audio.addEventListener("timeupdate", move);
+  state.audio.addEventListener("play", move);
+  logLine("完成");
+}
+
+function drawRuler(total){
+  const ruler = $("ruler");
+  const step = total <= 120 ? 10 : total <= 480 ? 30 : total <= 1200 ? 60 : 120;
+  let html = "";
+  for(let t = 0; t <= total; t += step){
+    const edge = t > 0 && t + step > total ? " class=\"end\"" : "";
+    html += `<i style="left:${pct(t, total)}"></i><b${edge} style="left:${pct(t, total)}">${fmtTime(t)}</b>`;
+  }
+  ruler.innerHTML = html;
+}
+
+function drawLanes(hostId, segments, total, colorKey){
+  const host = $(hostId);
+  const lanes = new Map();
+  for(const segment of segments){
+    const key = colorKey(segment);
+    if(!lanes.has(key)) lanes.set(key, []);
+    lanes.get(key).push(segment);
+  }
+  host.innerHTML = [...lanes].map(([key, items]) => {
+    const color = key ? colorFor(key) : "transparent";
+    const markup = items.map(s =>
+      `<div class="blk" style="left:${pct(s.start, total)};width:${pct(Math.max(s.end - s.start, .3), total)};background:${color}"
+        title="${key || "未匹配"} · ${fmtTime(s.start)}–${fmtTime(s.end)}"></div>`).join("");
+    return `<div class="grid"><span class="lane-name" style="color:${key ? color : "var(--fg-faint)"}">${key || "未匹配"}</span>
+              <div class="track${key ? "" : " unmatched"}">${markup}</div></div>`;
+  }).join("");
+}
+
+$("run").onclick = run;
+$("seconds").addEventListener("change", (event) => {
+  const value = Number(event.target.value);
+  if(value === 0 && state.meeting){
+    event.target.value = state.meeting.duration;
+  }
+});
+document.querySelectorAll(".presets button").forEach(button => {
+  button.onclick = () => {
+    const wanted = Number(button.dataset.seconds);
+    $("seconds").value = wanted === 0 && state.meeting ? state.meeting.duration : wanted;
+  };
+});
+loadMeetings().then(deepLink).catch(error => logLine(String(error), "err"));
+
+/* 深链：/?meeting=S_R004S01C01&seconds=120 打开即跑（刷新/转发同一次运行用） */
+function deepLink(){
+  const query = new URLSearchParams(location.search);
+  const wanted = query.get("meeting");
+  if(!wanted) return;
+  const button = [...document.querySelectorAll(".meetings button")]
+    .find(b => b.textContent.includes(wanted));
+  if(!button) return;
+  if(query.has("seconds")) $("seconds").value = query.get("seconds");
+  button.click();
+  run();
+}
+</script>
+</body>
+</html>

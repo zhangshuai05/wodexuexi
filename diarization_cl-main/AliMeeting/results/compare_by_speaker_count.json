@@ -1,0 +1,68 @@
+{
+  "official_by_count": {
+    "2": 4.84,
+    "3": 10.9,
+    "4": 23.18,
+    "all": 15.24
+  },
+  "groups": {
+    "2": {
+      "meetings": [
+        "R8009_M8018",
+        "R8009_M8019",
+        "R8009_M8020"
+      ],
+      "ours_der": 8.72,
+      "official_der": 4.84,
+      "counts": {
+        "OVERALL SPEAKER DIARIZATION ERROR": 8.72,
+        "SPEAKER ERROR TIME": 6.59,
+        "FALARM SPEAKER TIME": 150.885,
+        "MISSED SPEAKER TIME": 169.24,
+        "SCORED SPEAKER TIME": 3747.47
+      }
+    },
+    "3": {
+      "meetings": [
+        "R8008_M8013"
+      ],
+      "ours_der": 33.07,
+      "official_der": 10.9,
+      "counts": {
+        "OVERALL SPEAKER DIARIZATION ERROR": 33.07,
+        "SPEAKER ERROR TIME": 229.14,
+        "FALARM SPEAKER TIME": 82.635,
+        "MISSED SPEAKER TIME": 243.05,
+        "SCORED SPEAKER TIME": 1677.77
+      }
+    },
+    "4": {
+      "meetings": [
+        "R8001_M8004",
+        "R8003_M8001",
+        "R8007_M8010",
+        "R8007_M8011"
+      ],
+      "ours_der": 48.63,
+      "official_der": 23.18,
+      "counts": {
+        "OVERALL SPEAKER DIARIZATION ERROR": 48.63,
+        "SPEAKER ERROR TIME": 1478.93,
+        "FALARM SPEAKER TIME": 151.335,
+        "MISSED SPEAKER TIME": 1230.0,
+        "SCORED SPEAKER TIME": 5882.01
+      }
+    }
+  },
+  "all": {
+    "ours_der": 33.09,
+    "official_der": 15.24,
+    "counts": {
+      "OVERALL SPEAKER DIARIZATION ERROR": 33.09,
+      "SPEAKER ERROR TIME": 1714.66,
+      "FALARM SPEAKER TIME": 384.855,
+      "MISSED SPEAKER TIME": 1642.29,
+      "SCORED SPEAKER TIME": 11307.25
+    }
+  }
+}

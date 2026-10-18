@@ -1,0 +1,25 @@
+# Local model snapshots and configuration
+models/
+models.json
+
+# Input/output media and generated inference artifacts
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.npy
+*.pt
+*.pth
+*.ckpt
+*.bin
+diar_out/
+diar_result/
+output/
+
+# Python and editor state
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.idea/
+.vscode/

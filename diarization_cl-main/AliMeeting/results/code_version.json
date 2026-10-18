@@ -1,0 +1,29 @@
+{
+  "files": {
+    "streaming_asr/der.py": "b041b8eb5b60980794597ae8cc2a3a19de83e9c7ef1477f360056f59cdc740b0",
+    "streaming_asr/claude_a2_v11.py": "d794729f8194a31920146adf1d07a17c5b0bfb893be4596e4bd5b348aea22ee4",
+    "streaming_asr/claude_a2_v12.py": "60ccbd772eaa9cf78b13b231552625509576202ced96246f4f628b621e6e49c7",
+    "streaming_asr/v12_aishell4.py": "b0f4caa74268cb77bfc1c0863c2fddf1d2fe53655dc11853ae7f1ffe55821dc4",
+    "streaming_asr/web_server.py": "30edfb1a4a1816df7a12e3c422ccced0f35a84294039eebb9ceff39f61eead08",
+    "scripts/evaluation/probe_sentence_attribution.py": "53b67228b8a5114415a7a059df18903f6cdc06d5cd87b8d51d5c4581e00c8ad7"
+  },
+  "constants": {
+    "streaming_asr/claude_a2_v11.py": {
+      "WIN_S": "0.6",
+      "HOP_S": "0.15",
+      "MIN_VAD_FRACTION": "0.5",
+      "MAX_SPEAKERS": "4",
+      "MIN_CLUSTER_WINDOWS": "4",
+      "MIN_CLUSTER_SHARE": "0.015",
+      "MULTI_K_PENALTY": "0.005"
+    },
+    "streaming_asr/claude_a2_v12.py": {
+      "WIN_S": "2.0",
+      "HOP_S": "1.0",
+      "MAX_SPEAKERS": "10",
+      "SLIVER_WINDOWS": "2",
+      "REFINE_WIN_S": "0.6",
+      "REFINE_HOP_S": "0.15"
+    }
+  }
+}

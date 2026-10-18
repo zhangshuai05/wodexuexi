@@ -1,0 +1,105 @@
+{
+  "config": {
+    "chunk_s": 1.5,
+    "step_s": 0.75,
+    "knn_k": 8,
+    "max_k": 15,
+    "note": "谱聚类 k-NN 图 + eigengap 定 K；纯 scipy"
+  },
+  "rows": [
+    {
+      "meeting": "R8008_M8013",
+      "true_k": 3,
+      "n_chunks": 2137,
+      "k_auto": 3,
+      "eigvals": [
+        -0.0,
+        0.0062,
+        0.0189,
+        0.1522,
+        0.1688,
+        0.1958,
+        0.2387,
+        0.2503
+      ],
+      "auto": {
+        "acc": 0.5013661202185792,
+        "n_pred_speakers": 3,
+        "coverage": 0.9153005464480874
+      },
+      "true_k_forced": {
+        "acc": 0.5013661202185792,
+        "n_pred_speakers": 3,
+        "coverage": 0.9153005464480874
+      },
+      "ahc": {
+        "acc": 0.32650273224043713,
+        "n_pred_speakers": 1,
+        "coverage": 0.9153005464480874
+      },
+      "ahc_true": {
+        "acc": 0.3292349726775956,
+        "n_pred_speakers": 3,
+        "coverage": 0.9153005464480874
+      },
+      "k_ahc": 1,
+      "refined": {
+        "acc": 0.5450819672131147,
+        "n_pred_speakers": 3,
+        "coverage": 0.796448087431694
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": null,
+      "post_true": null,
+      "elapsed_s": 1167.6
+    },
+    {
+      "meeting": "R8007_M8010",
+      "true_k": 4,
+      "n_chunks": 1525,
+      "k_auto": 5,
+      "eigvals": [
+        0.0,
+        0.0153,
+        0.0273,
+        0.1001,
+        0.1406,
+        0.2149,
+        0.2605,
+        0.2636
+      ],
+      "auto": {
+        "acc": 0.26164267569856053,
+        "n_pred_speakers": 5,
+        "coverage": 0.8289585097375106
+      },
+      "true_k_forced": {
+        "acc": 0.2726502963590178,
+        "n_pred_speakers": 4,
+        "coverage": 0.8289585097375106
+      },
+      "ahc": {
+        "acc": 0.2235393734123624,
+        "n_pred_speakers": 2,
+        "coverage": 0.8289585097375106
+      },
+      "ahc_true": {
+        "acc": 0.23539373412362405,
+        "n_pred_speakers": 4,
+        "coverage": 0.8289585097375106
+      },
+      "k_ahc": 2,
+      "refined": {
+        "acc": 0.31583403895004236,
+        "n_pred_speakers": 5,
+        "coverage": 1.0
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": null,
+      "post_true": null,
+      "elapsed_s": 1033.9
+    }
+  ]
+}

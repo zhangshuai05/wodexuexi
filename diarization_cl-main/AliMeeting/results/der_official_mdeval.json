@@ -1,0 +1,70 @@
+{
+  "ours": {
+    "v12|md-eval|collar0.25": {
+      "der": 33.09,
+      "counts": {
+        "OVERALL SPEAKER DIARIZATION ERROR": 33.09,
+        "SPEAKER ERROR TIME": 1714.66,
+        "FALARM SPEAKER TIME": 384.855,
+        "MISSED SPEAKER TIME": 1642.29,
+        "SCORED SPEAKER TIME": 11307.25
+      }
+    },
+    "v12|md-eval|collar0.0": {
+      "der": 42.96,
+      "counts": {
+        "OVERALL SPEAKER DIARIZATION ERROR": 42.96,
+        "SPEAKER ERROR TIME": 2615.435,
+        "FALARM SPEAKER TIME": 995.7,
+        "MISSED SPEAKER TIME": 3963.075,
+        "SCORED SPEAKER TIME": 17632.6
+      }
+    },
+    "v12|md-eval|collar0.25|ignore_overlaps": {
+      "der": 24.15,
+      "counts": {
+        "OVERALL SPEAKER DIARIZATION ERROR": 24.15,
+        "SPEAKER ERROR TIME": 1535.315,
+        "FALARM SPEAKER TIME": 384.855,
+        "MISSED SPEAKER TIME": 155.375,
+        "SCORED SPEAKER TIME": 8592.63
+      }
+    },
+    "baseline|md-eval|collar0.25": {
+      "der": 38.86,
+      "counts": {
+        "OVERALL SPEAKER DIARIZATION ERROR": 38.86,
+        "SPEAKER ERROR TIME": 1348.49,
+        "FALARM SPEAKER TIME": 367.38,
+        "MISSED SPEAKER TIME": 2678.11,
+        "SCORED SPEAKER TIME": 11307.25
+      }
+    },
+    "baseline|md-eval|collar0.0": {
+      "der": 47.78,
+      "counts": {
+        "OVERALL SPEAKER DIARIZATION ERROR": 47.78,
+        "SPEAKER ERROR TIME": 2127.65,
+        "FALARM SPEAKER TIME": 934.58,
+        "MISSED SPEAKER TIME": 5363.18,
+        "SCORED SPEAKER TIME": 17632.6
+      }
+    },
+    "baseline|md-eval|collar0.25|ignore_overlaps": {
+      "der": 30.87,
+      "counts": {
+        "OVERALL SPEAKER DIARIZATION ERROR": 30.87,
+        "SPEAKER ERROR TIME": 1224.99,
+        "FALARM SPEAKER TIME": 367.38,
+        "MISSED SPEAKER TIME": 1060.13,
+        "SCORED SPEAKER TIME": 8592.63
+      }
+    }
+  },
+  "official": {
+    "baseline_eval_far_collar0.25": 15.24,
+    "baseline_eval_far_collar0.0": 24.52,
+    "royalflush_fusion_eval_collar0.25": 6.3,
+    "winner_A41_test_collar0.25": 2.98
+  }
+}

@@ -1,0 +1,5 @@
+funasr
+numpy
+scipy
+scikit-learn
+soundfile

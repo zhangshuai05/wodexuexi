@@ -1,0 +1,38 @@
+{
+  "config": {
+    "win_s": 0.9,
+    "hop_s": 0.45,
+    "note": "oracle 臂用真值剔重叠窗，是诊断上界"
+  },
+  "rows": [
+    {
+      "meeting": "R8007_M8010",
+      "n_windows": 3989,
+      "n_vad_segments": 58,
+      "pure_ratio": 0.230383554775633,
+      "short": {
+        "acc": 0.22203389830508474,
+        "k": 1,
+        "n_turns": 1180,
+        "k_cluster": 1
+      },
+      "margin_ratio": 1.0,
+      "margin": {
+        "acc": 0.0,
+        "k": 1,
+        "note": "未分出 >=2 簇"
+      },
+      "two": {
+        "acc": 0.0,
+        "k": 1,
+        "note": "未分出 >=2 簇"
+      },
+      "oracle": {
+        "acc": 0.3875968992248062,
+        "k": 1,
+        "n_turns": 258
+      },
+      "elapsed_s": 78.9
+    }
+  ]
+}

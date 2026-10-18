@@ -1,0 +1,131 @@
+{
+  "config": {
+    "chunk_s": 2.0,
+    "step_s": 1.0,
+    "knn_k": 8,
+    "max_k": 15,
+    "note": "谱聚类 k-NN 图 + eigengap 定 K；纯 scipy"
+  },
+  "rows": [
+    {
+      "meeting": "R8009_M8018",
+      "true_k": 2,
+      "n_chunks": 1182,
+      "k_auto": 2,
+      "eigvals": [
+        -0.0,
+        0.002,
+        0.1703,
+        0.1893,
+        0.2272,
+        0.2424,
+        0.285,
+        0.2972
+      ],
+      "auto": {
+        "acc": 0.7278195488721805,
+        "n_pred_speakers": 2,
+        "coverage": 0.9578947368421052
+      },
+      "true_k_forced": {
+        "acc": 0.7278195488721805,
+        "n_pred_speakers": 2,
+        "coverage": 0.9578947368421052
+      },
+      "ahc": {
+        "acc": 0.5864661654135338,
+        "n_pred_speakers": 1,
+        "coverage": 0.9578947368421052
+      },
+      "ahc_true": {
+        "acc": 0.5864661654135338,
+        "n_pred_speakers": 1,
+        "coverage": 0.9578947368421052
+      },
+      "k_ahc": 1,
+      "post_auto": null,
+      "post_true": null,
+      "elapsed_s": 36.9
+    },
+    {
+      "meeting": "R8009_M8019",
+      "true_k": 2,
+      "n_chunks": 1431,
+      "k_auto": 2,
+      "eigvals": [
+        -0.0,
+        0.0037,
+        0.1316,
+        0.146,
+        0.1553,
+        0.2117,
+        0.2283,
+        0.2574
+      ],
+      "auto": {
+        "acc": 0.8279457768508863,
+        "n_pred_speakers": 2,
+        "coverage": 0.9603753910323254
+      },
+      "true_k_forced": {
+        "acc": 0.8279457768508863,
+        "n_pred_speakers": 2,
+        "coverage": 0.9603753910323254
+      },
+      "ahc": {
+        "acc": 0.5140771637122002,
+        "n_pred_speakers": 1,
+        "coverage": 0.9603753910323254
+      },
+      "ahc_true": {
+        "acc": 0.5140771637122002,
+        "n_pred_speakers": 1,
+        "coverage": 0.9603753910323254
+      },
+      "k_ahc": 1,
+      "post_auto": null,
+      "post_true": null,
+      "elapsed_s": 45.2
+    },
+    {
+      "meeting": "R8009_M8020",
+      "true_k": 2,
+      "n_chunks": 1424,
+      "k_auto": 2,
+      "eigvals": [
+        -0.0,
+        0.0026,
+        0.1527,
+        0.2022,
+        0.2185,
+        0.2615,
+        0.2784,
+        0.2884
+      ],
+      "auto": {
+        "acc": 0.7940503432494279,
+        "n_pred_speakers": 2,
+        "coverage": 0.9645308924485125
+      },
+      "true_k_forced": {
+        "acc": 0.7940503432494279,
+        "n_pred_speakers": 2,
+        "coverage": 0.9645308924485125
+      },
+      "ahc": {
+        "acc": 0.41762013729977115,
+        "n_pred_speakers": 1,
+        "coverage": 0.9645308924485125
+      },
+      "ahc_true": {
+        "acc": 0.41876430205949655,
+        "n_pred_speakers": 2,
+        "coverage": 0.9645308924485125
+      },
+      "k_ahc": 1,
+      "post_auto": null,
+      "post_true": null,
+      "elapsed_s": 44.3
+    }
+  ]
+}

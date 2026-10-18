@@ -1,0 +1,6 @@
+{
+  "vad": "models/vad",
+  "spk": "models/spk",
+  "asr": "models/asr",
+  "frcrn": "models/frcrn"
+}

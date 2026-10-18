@@ -1,0 +1,226 @@
+{
+  "config": {
+    "sig_thresh": 0.1,
+    "min_hold": 1.2,
+    "merge_gap": 0.4,
+    "note": "句级尺子含全局 ID 映射；平滑作用于预测段表，不改标签"
+  },
+  "rows": [
+    {
+      "meeting": "R8001_M8004",
+      "n_pred_speakers": 1,
+      "n_truth_speakers": 4,
+      "mapping": {
+        "N_SPK8013": "v12_0"
+      },
+      "base": {
+        "n_turns": 604,
+        "ok": 272,
+        "empty": 8,
+        "acc_sentence": 0.4503311258278146,
+        "acc_frame": 0.3621781733715907,
+        "fragments_mean": 1.1109271523178808,
+        "split_rate": 0.0
+      },
+      "smooth": {
+        "n_turns": 604,
+        "ok": 272,
+        "empty": 8,
+        "acc_sentence": 0.4503311258278146,
+        "acc_frame": 0.3621781733715907,
+        "fragments_mean": 0.9966887417218543,
+        "split_rate": 0.0
+      }
+    },
+    {
+      "meeting": "R8003_M8001",
+      "n_pred_speakers": 3,
+      "n_truth_speakers": 4,
+      "mapping": {
+        "N_SPK8003": "v12_0",
+        "N_SPK8004": "v12_1",
+        "N_SPK8002": "v12_2"
+      },
+      "base": {
+        "n_turns": 674,
+        "ok": 285,
+        "empty": 9,
+        "acc_sentence": 0.4228486646884273,
+        "acc_frame": 0.6627187465519149,
+        "fragments_mean": 1.870919881305638,
+        "split_rate": 0.22997032640949555
+      },
+      "smooth": {
+        "n_turns": 674,
+        "ok": 273,
+        "empty": 9,
+        "acc_sentence": 0.4050445103857567,
+        "acc_frame": 0.6690433631247932,
+        "fragments_mean": 1.4213649851632046,
+        "split_rate": 0.16913946587537093
+      }
+    },
+    {
+      "meeting": "R8007_M8010",
+      "n_pred_speakers": 1,
+      "n_truth_speakers": 4,
+      "mapping": {
+        "N_SPK8054": "v12_0"
+      },
+      "base": {
+        "n_turns": 1181,
+        "ok": 262,
+        "empty": 0,
+        "acc_sentence": 0.2218458933107536,
+        "acc_frame": 0.3635119677252714,
+        "fragments_mean": 1.0008467400508043,
+        "split_rate": 0.0
+      },
+      "smooth": {
+        "n_turns": 1181,
+        "ok": 262,
+        "empty": 0,
+        "acc_sentence": 0.2218458933107536,
+        "acc_frame": 0.3635119677252714,
+        "fragments_mean": 1.0,
+        "split_rate": 0.0
+      }
+    },
+    {
+      "meeting": "R8007_M8011",
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 4,
+      "mapping": {
+        "N_SPK8068": "v12_1",
+        "N_SPK8066": "v12_0"
+      },
+      "base": {
+        "n_turns": 768,
+        "ok": 267,
+        "empty": 1,
+        "acc_sentence": 0.34765625,
+        "acc_frame": 0.5482883719330816,
+        "fragments_mean": 1.7864583333333333,
+        "split_rate": 0.25390625
+      },
+      "smooth": {
+        "n_turns": 768,
+        "ok": 258,
+        "empty": 0,
+        "acc_sentence": 0.3359375,
+        "acc_frame": 0.5498358006224096,
+        "fragments_mean": 1.3528645833333333,
+        "split_rate": 0.17578125
+      }
+    },
+    {
+      "meeting": "R8008_M8013",
+      "n_pred_speakers": 3,
+      "n_truth_speakers": 3,
+      "mapping": {
+        "N_SPK8048": "v12_1",
+        "N_SPK8047": "v12_0",
+        "N_SPK8049": "v12_2"
+      },
+      "base": {
+        "n_turns": 732,
+        "ok": 279,
+        "empty": 38,
+        "acc_sentence": 0.38114754098360654,
+        "acc_frame": 0.6390352948182938,
+        "fragments_mean": 1.5792349726775956,
+        "split_rate": 0.12158469945355191
+      },
+      "smooth": {
+        "n_turns": 732,
+        "ok": 278,
+        "empty": 38,
+        "acc_sentence": 0.3797814207650273,
+        "acc_frame": 0.6422129770245498,
+        "fragments_mean": 1.1707650273224044,
+        "split_rate": 0.11065573770491803
+      }
+    },
+    {
+      "meeting": "R8009_M8018",
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 2,
+      "mapping": {
+        "N_SPK8021": "v12_0",
+        "N_SPK8022": "v12_1"
+      },
+      "base": {
+        "n_turns": 665,
+        "ok": 513,
+        "empty": 5,
+        "acc_sentence": 0.7714285714285715,
+        "acc_frame": 0.9041095040039726,
+        "fragments_mean": 1.356390977443609,
+        "split_rate": 0.1518796992481203
+      },
+      "smooth": {
+        "n_turns": 665,
+        "ok": 498,
+        "empty": 5,
+        "acc_sentence": 0.7488721804511278,
+        "acc_frame": 0.9036656527407041,
+        "fragments_mean": 1.1669172932330827,
+        "split_rate": 0.07518796992481203
+      }
+    },
+    {
+      "meeting": "R8009_M8019",
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 2,
+      "mapping": {
+        "N_SPK8023": "v12_1",
+        "N_SPK8024": "v12_0"
+      },
+      "base": {
+        "n_turns": 959,
+        "ok": 822,
+        "empty": 1,
+        "acc_sentence": 0.8571428571428571,
+        "acc_frame": 0.8845148002180202,
+        "fragments_mean": 1.3065693430656935,
+        "split_rate": 0.14077163712200208
+      },
+      "smooth": {
+        "n_turns": 959,
+        "ok": 816,
+        "empty": 1,
+        "acc_sentence": 0.8508863399374348,
+        "acc_frame": 0.8850546098696075,
+        "fragments_mean": 1.137643378519291,
+        "split_rate": 0.09071949947862357
+      }
+    },
+    {
+      "meeting": "R8009_M8020",
+      "n_pred_speakers": 2,
+      "n_truth_speakers": 2,
+      "mapping": {
+        "N_SPK8025": "v12_1",
+        "N_SPK8026": "v12_0"
+      },
+      "base": {
+        "n_turns": 874,
+        "ok": 736,
+        "empty": 1,
+        "acc_sentence": 0.8421052631578947,
+        "acc_frame": 0.9127472797885886,
+        "fragments_mean": 1.2528604118993134,
+        "split_rate": 0.12013729977116705
+      },
+      "smooth": {
+        "n_turns": 874,
+        "ok": 714,
+        "empty": 1,
+        "acc_sentence": 0.816933638443936,
+        "acc_frame": 0.9139963837504146,
+        "fragments_mean": 1.1144164759725401,
+        "split_rate": 0.06064073226544622
+      }
+    }
+  ]
+}

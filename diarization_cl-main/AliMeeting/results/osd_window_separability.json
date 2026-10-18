@@ -1,0 +1,52 @@
+{
+  "rows": [
+    {
+      "meeting": "R8007_M8010",
+      "arm": "grid",
+      "n_windows": 1851,
+      "n_labelled": 194,
+      "n_speakers": 3,
+      "within_median": 0.4188404977321625,
+      "between_median": 0.7956251502037048,
+      "gap": 0.37678465247154236,
+      "loo_acc": 1.0,
+      "verdict": "可分（问题在聚类）"
+    },
+    {
+      "meeting": "R8007_M8010",
+      "arm": "osdwin",
+      "n_windows": 318,
+      "n_labelled": 165,
+      "n_speakers": 3,
+      "within_median": 0.4068285822868347,
+      "between_median": 0.7820968329906464,
+      "gap": 0.37526825070381165,
+      "loo_acc": 1.0,
+      "verdict": "可分（问题在聚类）"
+    },
+    {
+      "meeting": "R8008_M8013",
+      "arm": "grid",
+      "n_windows": 471,
+      "n_labelled": 318,
+      "n_speakers": 3,
+      "within_median": 0.5120151042938232,
+      "between_median": 0.7779330462217331,
+      "gap": 0.26591794192790985,
+      "loo_acc": 1.0,
+      "verdict": "可分（问题在聚类）"
+    },
+    {
+      "meeting": "R8008_M8013",
+      "arm": "osdwin",
+      "n_windows": 981,
+      "n_labelled": 759,
+      "n_speakers": 3,
+      "within_median": 0.5062963366508484,
+      "between_median": 0.7883997708559036,
+      "gap": 0.28210343420505524,
+      "loo_acc": 1.0,
+      "verdict": "可分（问题在聚类）"
+    }
+  ]
+}

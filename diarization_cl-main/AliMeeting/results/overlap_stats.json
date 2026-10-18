@@ -1,0 +1,591 @@
+{
+  "frame_s": 0.01,
+  "ali": {
+    "per_meeting": {
+      "R8001_M8004": {
+        "duration_s": 1550.94,
+        "speech_s": 1491.54,
+        "overlap_region_s": 456.34,
+        "speaker_time_s": 2049.24,
+        "speaker_overlap_s": 1014.04,
+        "n_speakers": 4,
+        "ratio_A_region": 0.306,
+        "ratio_B_speaker_time": 0.3739,
+        "ratio_C_speaker_overlap": 0.6799
+      },
+      "R8003_M8001": {
+        "duration_s": 2067.7,
+        "speech_s": 1877.18,
+        "overlap_region_s": 333.5,
+        "speaker_time_s": 2265.75,
+        "speaker_overlap_s": 722.07,
+        "n_speakers": 4,
+        "ratio_A_region": 0.1777,
+        "ratio_B_speaker_time": 0.207,
+        "ratio_C_speaker_overlap": 0.3847
+      },
+      "R8007_M8010": {
+        "duration_s": 1853.9,
+        "speech_s": 1822.1,
+        "overlap_region_s": 1046.74,
+        "speaker_time_s": 3252.08,
+        "speaker_overlap_s": 2476.72,
+        "n_speakers": 4,
+        "ratio_A_region": 0.5745,
+        "ratio_B_speaker_time": 0.7848,
+        "ratio_C_speaker_overlap": 1.3593
+      },
+      "R8007_M8011": {
+        "duration_s": 1858.98,
+        "speech_s": 1801.94,
+        "overlap_region_s": 442.78,
+        "speaker_time_s": 2326.44,
+        "speaker_overlap_s": 967.28,
+        "n_speakers": 4,
+        "ratio_A_region": 0.2457,
+        "ratio_B_speaker_time": 0.2911,
+        "ratio_C_speaker_overlap": 0.5368
+      },
+      "R8008_M8013": {
+        "duration_s": 2235.49,
+        "speech_s": 2020.73,
+        "overlap_region_s": 310.04,
+        "speaker_time_s": 2350.77,
+        "speaker_overlap_s": 640.08,
+        "n_speakers": 3,
+        "ratio_A_region": 0.1534,
+        "ratio_B_speaker_time": 0.1633,
+        "ratio_C_speaker_overlap": 0.3168
+      },
+      "R8009_M8018": {
+        "duration_s": 1651.48,
+        "speech_s": 1494.6,
+        "overlap_region_s": 116.3,
+        "speaker_time_s": 1610.9,
+        "speaker_overlap_s": 232.6,
+        "n_speakers": 2,
+        "ratio_A_region": 0.0778,
+        "ratio_B_speaker_time": 0.0778,
+        "ratio_C_speaker_overlap": 0.1556
+      },
+      "R8009_M8019": {
+        "duration_s": 1964.66,
+        "speech_s": 1720.74,
+        "overlap_region_s": 187.34,
+        "speaker_time_s": 1908.08,
+        "speaker_overlap_s": 374.68,
+        "n_speakers": 2,
+        "ratio_A_region": 0.1089,
+        "ratio_B_speaker_time": 0.1089,
+        "ratio_C_speaker_overlap": 0.2177
+      },
+      "R8009_M8020": {
+        "duration_s": 1907.6,
+        "speech_s": 1744.04,
+        "overlap_region_s": 125.3,
+        "speaker_time_s": 1869.34,
+        "speaker_overlap_s": 250.6,
+        "n_speakers": 2,
+        "ratio_A_region": 0.0718,
+        "ratio_B_speaker_time": 0.0718,
+        "ratio_C_speaker_overlap": 0.1437
+      }
+    },
+    "summary": {
+      "n_meetings": 8,
+      "speech_hours": 3.88,
+      "macro_A_region": 0.2145,
+      "macro_B_speaker_time": 0.2598,
+      "macro_C_speaker_overlap": 0.4743,
+      "micro_A_region": 0.216,
+      "micro_B_speaker_time": 0.2619,
+      "micro_C_speaker_overlap": 0.4779
+    }
+  },
+  "aishell4_test": {
+    "per_meeting": {
+      "L_R003S01C02": {
+        "duration_s": 2266.755,
+        "speech_s": 2114.31,
+        "overlap_region_s": 188.36,
+        "speaker_time_s": 2311.88,
+        "speaker_overlap_s": 385.93,
+        "n_speakers": 6,
+        "ratio_A_region": 0.0891,
+        "ratio_B_speaker_time": 0.0934,
+        "ratio_C_speaker_overlap": 0.1825
+      },
+      "L_R003S02C02": {
+        "duration_s": 2239.749,
+        "speech_s": 1974.19,
+        "overlap_region_s": 59.91,
+        "speaker_time_s": 2036.76,
+        "speaker_overlap_s": 122.48,
+        "n_speakers": 6,
+        "ratio_A_region": 0.0303,
+        "ratio_B_speaker_time": 0.0317,
+        "ratio_C_speaker_overlap": 0.062
+      },
+      "L_R003S03C02": {
+        "duration_s": 2253.509,
+        "speech_s": 2105.55,
+        "overlap_region_s": 256.89,
+        "speaker_time_s": 2376.65,
+        "speaker_overlap_s": 527.99,
+        "n_speakers": 6,
+        "ratio_A_region": 0.122,
+        "ratio_B_speaker_time": 0.1288,
+        "ratio_C_speaker_overlap": 0.2508
+      },
+      "L_R003S04C02": {
+        "duration_s": 2210.886,
+        "speech_s": 1952.65,
+        "overlap_region_s": 58.07,
+        "speaker_time_s": 2011.96,
+        "speaker_overlap_s": 117.38,
+        "n_speakers": 6,
+        "ratio_A_region": 0.0297,
+        "ratio_B_speaker_time": 0.0304,
+        "ratio_C_speaker_overlap": 0.0601
+      },
+      "L_R004S01C01": {
+        "duration_s": 2182.124,
+        "speech_s": 1990.38,
+        "overlap_region_s": 51.49,
+        "speaker_time_s": 2041.87,
+        "speaker_overlap_s": 102.98,
+        "n_speakers": 7,
+        "ratio_A_region": 0.0259,
+        "ratio_B_speaker_time": 0.0259,
+        "ratio_C_speaker_overlap": 0.0517
+      },
+      "L_R004S02C01": {
+        "duration_s": 2222.954,
+        "speech_s": 2120.31,
+        "overlap_region_s": 83.77,
+        "speaker_time_s": 2204.91,
+        "speaker_overlap_s": 168.37,
+        "n_speakers": 7,
+        "ratio_A_region": 0.0395,
+        "ratio_B_speaker_time": 0.0399,
+        "ratio_C_speaker_overlap": 0.0794
+      },
+      "L_R004S03C01": {
+        "duration_s": 2225.958,
+        "speech_s": 2171.58,
+        "overlap_region_s": 141.66,
+        "speaker_time_s": 2314.1,
+        "speaker_overlap_s": 284.18,
+        "n_speakers": 7,
+        "ratio_A_region": 0.0652,
+        "ratio_B_speaker_time": 0.0656,
+        "ratio_C_speaker_overlap": 0.1309
+      },
+      "L_R004S06C01": {
+        "duration_s": 2203.835,
+        "speech_s": 2025.0,
+        "overlap_region_s": 4.9,
+        "speaker_time_s": 2029.9,
+        "speaker_overlap_s": 9.8,
+        "n_speakers": 7,
+        "ratio_A_region": 0.0024,
+        "ratio_B_speaker_time": 0.0024,
+        "ratio_C_speaker_overlap": 0.0048
+      },
+      "M_R003S01C01": {
+        "duration_s": 2247.843,
+        "speech_s": 2058.65,
+        "overlap_region_s": 127.58,
+        "speaker_time_s": 2191.39,
+        "speaker_overlap_s": 260.32,
+        "n_speakers": 6,
+        "ratio_A_region": 0.062,
+        "ratio_B_speaker_time": 0.0645,
+        "ratio_C_speaker_overlap": 0.1265
+      },
+      "M_R003S02C01": {
+        "duration_s": 2302.287,
+        "speech_s": 2155.91,
+        "overlap_region_s": 209.85,
+        "speaker_time_s": 2376.72,
+        "speaker_overlap_s": 430.66,
+        "n_speakers": 6,
+        "ratio_A_region": 0.0973,
+        "ratio_B_speaker_time": 0.1024,
+        "ratio_C_speaker_overlap": 0.1998
+      },
+      "M_R003S04C01": {
+        "duration_s": 2244.595,
+        "speech_s": 1847.68,
+        "overlap_region_s": 165.34,
+        "speaker_time_s": 2015.78,
+        "speaker_overlap_s": 333.44,
+        "n_speakers": 6,
+        "ratio_A_region": 0.0895,
+        "ratio_B_speaker_time": 0.091,
+        "ratio_C_speaker_overlap": 0.1805
+      },
+      "M_R003S05C01": {
+        "duration_s": 2273.134,
+        "speech_s": 2094.83,
+        "overlap_region_s": 149.72,
+        "speaker_time_s": 2249.71,
+        "speaker_overlap_s": 304.6,
+        "n_speakers": 6,
+        "ratio_A_region": 0.0715,
+        "ratio_B_speaker_time": 0.0739,
+        "ratio_C_speaker_overlap": 0.1454
+      },
+      "S_R003S01C01": {
+        "duration_s": 2209.752,
+        "speech_s": 2042.63,
+        "overlap_region_s": 80.73,
+        "speaker_time_s": 2127.83,
+        "speaker_overlap_s": 165.93,
+        "n_speakers": 5,
+        "ratio_A_region": 0.0395,
+        "ratio_B_speaker_time": 0.0417,
+        "ratio_C_speaker_overlap": 0.0812
+      },
+      "S_R003S02C01": {
+        "duration_s": 2352.72,
+        "speech_s": 2165.77,
+        "overlap_region_s": 55.37,
+        "speaker_time_s": 2222.77,
+        "speaker_overlap_s": 112.37,
+        "n_speakers": 5,
+        "ratio_A_region": 0.0256,
+        "ratio_B_speaker_time": 0.0263,
+        "ratio_C_speaker_overlap": 0.0519
+      },
+      "S_R003S03C01": {
+        "duration_s": 2266.16,
+        "speech_s": 2007.88,
+        "overlap_region_s": 62.21,
+        "speaker_time_s": 2071.24,
+        "speaker_overlap_s": 125.57,
+        "n_speakers": 5,
+        "ratio_A_region": 0.031,
+        "ratio_B_speaker_time": 0.0316,
+        "ratio_C_speaker_overlap": 0.0625
+      },
+      "S_R003S04C01": {
+        "duration_s": 2382.944,
+        "speech_s": 2289.0,
+        "overlap_region_s": 313.5,
+        "speaker_time_s": 2615.81,
+        "speaker_overlap_s": 640.31,
+        "n_speakers": 5,
+        "ratio_A_region": 0.137,
+        "ratio_B_speaker_time": 0.1428,
+        "ratio_C_speaker_overlap": 0.2797
+      },
+      "S_R004S01C01": {
+        "duration_s": 2317.18,
+        "speech_s": 2090.24,
+        "overlap_region_s": 27.37,
+        "speaker_time_s": 2117.94,
+        "speaker_overlap_s": 55.07,
+        "n_speakers": 5,
+        "ratio_A_region": 0.0131,
+        "ratio_B_speaker_time": 0.0133,
+        "ratio_C_speaker_overlap": 0.0263
+      },
+      "S_R004S02C01": {
+        "duration_s": 2268.888,
+        "speech_s": 2081.99,
+        "overlap_region_s": 13.16,
+        "speaker_time_s": 2095.15,
+        "speaker_overlap_s": 26.32,
+        "n_speakers": 5,
+        "ratio_A_region": 0.0063,
+        "ratio_B_speaker_time": 0.0063,
+        "ratio_C_speaker_overlap": 0.0126
+      },
+      "S_R004S03C01": {
+        "duration_s": 2306.147,
+        "speech_s": 2074.42,
+        "overlap_region_s": 0.0,
+        "speaker_time_s": 2074.42,
+        "speaker_overlap_s": 0.0,
+        "n_speakers": 5,
+        "ratio_A_region": 0.0,
+        "ratio_B_speaker_time": 0.0,
+        "ratio_C_speaker_overlap": 0.0
+      },
+      "S_R004S04C01": {
+        "duration_s": 2290.482,
+        "speech_s": 2078.07,
+        "overlap_region_s": 0.79,
+        "speaker_time_s": 2078.86,
+        "speaker_overlap_s": 1.58,
+        "n_speakers": 5,
+        "ratio_A_region": 0.0004,
+        "ratio_B_speaker_time": 0.0004,
+        "ratio_C_speaker_overlap": 0.0008
+      }
+    },
+    "summary": {
+      "n_meetings": 20,
+      "speech_hours": 11.51,
+      "macro_A_region": 0.0489,
+      "macro_B_speaker_time": 0.0506,
+      "macro_C_speaker_overlap": 0.0995,
+      "micro_A_region": 0.0495,
+      "micro_B_speaker_time": 0.0513,
+      "micro_C_speaker_overlap": 0.1008
+    },
+    "subsets": {
+      "dev 12 场": {
+        "per_meeting": {
+          "L_R003S01C02": {
+            "duration_s": 2266.755,
+            "speech_s": 2114.31,
+            "overlap_region_s": 188.36,
+            "speaker_time_s": 2311.88,
+            "speaker_overlap_s": 385.93,
+            "n_speakers": 6,
+            "ratio_A_region": 0.0891,
+            "ratio_B_speaker_time": 0.0934,
+            "ratio_C_speaker_overlap": 0.1825
+          },
+          "L_R003S02C02": {
+            "duration_s": 2239.749,
+            "speech_s": 1974.19,
+            "overlap_region_s": 59.91,
+            "speaker_time_s": 2036.76,
+            "speaker_overlap_s": 122.48,
+            "n_speakers": 6,
+            "ratio_A_region": 0.0303,
+            "ratio_B_speaker_time": 0.0317,
+            "ratio_C_speaker_overlap": 0.062
+          },
+          "L_R003S03C02": {
+            "duration_s": 2253.509,
+            "speech_s": 2105.55,
+            "overlap_region_s": 256.89,
+            "speaker_time_s": 2376.65,
+            "speaker_overlap_s": 527.99,
+            "n_speakers": 6,
+            "ratio_A_region": 0.122,
+            "ratio_B_speaker_time": 0.1288,
+            "ratio_C_speaker_overlap": 0.2508
+          },
+          "L_R003S04C02": {
+            "duration_s": 2210.886,
+            "speech_s": 1952.65,
+            "overlap_region_s": 58.07,
+            "speaker_time_s": 2011.96,
+            "speaker_overlap_s": 117.38,
+            "n_speakers": 6,
+            "ratio_A_region": 0.0297,
+            "ratio_B_speaker_time": 0.0304,
+            "ratio_C_speaker_overlap": 0.0601
+          },
+          "M_R003S01C01": {
+            "duration_s": 2247.843,
+            "speech_s": 2058.65,
+            "overlap_region_s": 127.58,
+            "speaker_time_s": 2191.39,
+            "speaker_overlap_s": 260.32,
+            "n_speakers": 6,
+            "ratio_A_region": 0.062,
+            "ratio_B_speaker_time": 0.0645,
+            "ratio_C_speaker_overlap": 0.1265
+          },
+          "M_R003S02C01": {
+            "duration_s": 2302.287,
+            "speech_s": 2155.91,
+            "overlap_region_s": 209.85,
+            "speaker_time_s": 2376.72,
+            "speaker_overlap_s": 430.66,
+            "n_speakers": 6,
+            "ratio_A_region": 0.0973,
+            "ratio_B_speaker_time": 0.1024,
+            "ratio_C_speaker_overlap": 0.1998
+          },
+          "M_R003S04C01": {
+            "duration_s": 2244.595,
+            "speech_s": 1847.68,
+            "overlap_region_s": 165.34,
+            "speaker_time_s": 2015.78,
+            "speaker_overlap_s": 333.44,
+            "n_speakers": 6,
+            "ratio_A_region": 0.0895,
+            "ratio_B_speaker_time": 0.091,
+            "ratio_C_speaker_overlap": 0.1805
+          },
+          "M_R003S05C01": {
+            "duration_s": 2273.134,
+            "speech_s": 2094.83,
+            "overlap_region_s": 149.72,
+            "speaker_time_s": 2249.71,
+            "speaker_overlap_s": 304.6,
+            "n_speakers": 6,
+            "ratio_A_region": 0.0715,
+            "ratio_B_speaker_time": 0.0739,
+            "ratio_C_speaker_overlap": 0.1454
+          },
+          "S_R004S01C01": {
+            "duration_s": 2317.18,
+            "speech_s": 2090.24,
+            "overlap_region_s": 27.37,
+            "speaker_time_s": 2117.94,
+            "speaker_overlap_s": 55.07,
+            "n_speakers": 5,
+            "ratio_A_region": 0.0131,
+            "ratio_B_speaker_time": 0.0133,
+            "ratio_C_speaker_overlap": 0.0263
+          },
+          "S_R004S02C01": {
+            "duration_s": 2268.888,
+            "speech_s": 2081.99,
+            "overlap_region_s": 13.16,
+            "speaker_time_s": 2095.15,
+            "speaker_overlap_s": 26.32,
+            "n_speakers": 5,
+            "ratio_A_region": 0.0063,
+            "ratio_B_speaker_time": 0.0063,
+            "ratio_C_speaker_overlap": 0.0126
+          },
+          "S_R004S03C01": {
+            "duration_s": 2306.147,
+            "speech_s": 2074.42,
+            "overlap_region_s": 0.0,
+            "speaker_time_s": 2074.42,
+            "speaker_overlap_s": 0.0,
+            "n_speakers": 5,
+            "ratio_A_region": 0.0,
+            "ratio_B_speaker_time": 0.0,
+            "ratio_C_speaker_overlap": 0.0
+          },
+          "S_R004S04C01": {
+            "duration_s": 2290.482,
+            "speech_s": 2078.07,
+            "overlap_region_s": 0.79,
+            "speaker_time_s": 2078.86,
+            "speaker_overlap_s": 1.58,
+            "n_speakers": 5,
+            "ratio_A_region": 0.0004,
+            "ratio_B_speaker_time": 0.0004,
+            "ratio_C_speaker_overlap": 0.0008
+          }
+        },
+        "summary": {
+          "n_meetings": 12,
+          "speech_hours": 6.84,
+          "macro_A_region": 0.0509,
+          "macro_B_speaker_time": 0.053,
+          "macro_C_speaker_overlap": 0.1039,
+          "micro_A_region": 0.051,
+          "micro_B_speaker_time": 0.0531,
+          "micro_C_speaker_overlap": 0.1042
+        }
+      },
+      "holdout 8 场": {
+        "per_meeting": {
+          "L_R004S01C01": {
+            "duration_s": 2182.124,
+            "speech_s": 1990.38,
+            "overlap_region_s": 51.49,
+            "speaker_time_s": 2041.87,
+            "speaker_overlap_s": 102.98,
+            "n_speakers": 7,
+            "ratio_A_region": 0.0259,
+            "ratio_B_speaker_time": 0.0259,
+            "ratio_C_speaker_overlap": 0.0517
+          },
+          "L_R004S02C01": {
+            "duration_s": 2222.954,
+            "speech_s": 2120.31,
+            "overlap_region_s": 83.77,
+            "speaker_time_s": 2204.91,
+            "speaker_overlap_s": 168.37,
+            "n_speakers": 7,
+            "ratio_A_region": 0.0395,
+            "ratio_B_speaker_time": 0.0399,
+            "ratio_C_speaker_overlap": 0.0794
+          },
+          "L_R004S03C01": {
+            "duration_s": 2225.958,
+            "speech_s": 2171.58,
+            "overlap_region_s": 141.66,
+            "speaker_time_s": 2314.1,
+            "speaker_overlap_s": 284.18,
+            "n_speakers": 7,
+            "ratio_A_region": 0.0652,
+            "ratio_B_speaker_time": 0.0656,
+            "ratio_C_speaker_overlap": 0.1309
+          },
+          "L_R004S06C01": {
+            "duration_s": 2203.835,
+            "speech_s": 2025.0,
+            "overlap_region_s": 4.9,
+            "speaker_time_s": 2029.9,
+            "speaker_overlap_s": 9.8,
+            "n_speakers": 7,
+            "ratio_A_region": 0.0024,
+            "ratio_B_speaker_time": 0.0024,
+            "ratio_C_speaker_overlap": 0.0048
+          },
+          "S_R003S01C01": {
+            "duration_s": 2209.752,
+            "speech_s": 2042.63,
+            "overlap_region_s": 80.73,
+            "speaker_time_s": 2127.83,
+            "speaker_overlap_s": 165.93,
+            "n_speakers": 5,
+            "ratio_A_region": 0.0395,
+            "ratio_B_speaker_time": 0.0417,
+            "ratio_C_speaker_overlap": 0.0812
+          },
+          "S_R003S02C01": {
+            "duration_s": 2352.72,
+            "speech_s": 2165.77,
+            "overlap_region_s": 55.37,
+            "speaker_time_s": 2222.77,
+            "speaker_overlap_s": 112.37,
+            "n_speakers": 5,
+            "ratio_A_region": 0.0256,
+            "ratio_B_speaker_time": 0.0263,
+            "ratio_C_speaker_overlap": 0.0519
+          },
+          "S_R003S03C01": {
+            "duration_s": 2266.16,
+            "speech_s": 2007.88,
+            "overlap_region_s": 62.21,
+            "speaker_time_s": 2071.24,
+            "speaker_overlap_s": 125.57,
+            "n_speakers": 5,
+            "ratio_A_region": 0.031,
+            "ratio_B_speaker_time": 0.0316,
+            "ratio_C_speaker_overlap": 0.0625
+          },
+          "S_R003S04C01": {
+            "duration_s": 2382.944,
+            "speech_s": 2289.0,
+            "overlap_region_s": 313.5,
+            "speaker_time_s": 2615.81,
+            "speaker_overlap_s": 640.31,
+            "n_speakers": 5,
+            "ratio_A_region": 0.137,
+            "ratio_B_speaker_time": 0.1428,
+            "ratio_C_speaker_overlap": 0.2797
+          }
+        },
+        "summary": {
+          "n_meetings": 8,
+          "speech_hours": 4.67,
+          "macro_A_region": 0.0458,
+          "macro_B_speaker_time": 0.047,
+          "macro_C_speaker_overlap": 0.0928,
+          "micro_A_region": 0.0472,
+          "micro_B_speaker_time": 0.0485,
+          "micro_C_speaker_overlap": 0.0957
+        }
+      }
+    }
+  },
+  "official_ali_eval_overlap": 0.3476,
+  "closest_convention": "micro_B_speaker_time"
+}

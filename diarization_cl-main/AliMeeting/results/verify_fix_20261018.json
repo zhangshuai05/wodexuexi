@@ -1,0 +1,183 @@
+{
+  "config": {
+    "chunk_s": 1.5,
+    "step_s": 0.75,
+    "knn_k": 8,
+    "max_k": 15,
+    "arm": "class",
+    "post": true,
+    "normalize_peak": 0.85,
+    "refine_confine": false,
+    "note": "谱聚类 k-NN 图 + eigengap 定 K；纯 scipy"
+  },
+  "rows": [
+    {
+      "meeting": "R8007_M8010",
+      "true_k": 4,
+      "n_chunks": 1525,
+      "k_auto": 5,
+      "dense_k": 4,
+      "eigvals": [
+        0.0,
+        0.0153,
+        0.0273,
+        0.1001,
+        0.1406,
+        0.2149,
+        0.2605,
+        0.2636
+      ],
+      "auto": {
+        "acc": 0.26164267569856053,
+        "n_pred_speakers": 5,
+        "coverage": 0.8289585097375106
+      },
+      "true_k_forced": {
+        "acc": 0.2726502963590178,
+        "n_pred_speakers": 4,
+        "coverage": 0.8289585097375106
+      },
+      "ahc": {
+        "acc": 0.2235393734123624,
+        "n_pred_speakers": 2,
+        "coverage": 0.8289585097375106
+      },
+      "ahc_true": {
+        "acc": 0.23539373412362405,
+        "n_pred_speakers": 4,
+        "coverage": 0.8289585097375106
+      },
+      "k_ahc": 2,
+      "refined": {
+        "acc": 0.31583403895004236,
+        "n_pred_speakers": 5,
+        "coverage": 1.0
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.2802709568162574,
+        "multilabel_rate": 0.6477561388653683,
+        "coverage": 0.9974597798475868
+      },
+      "post_true": {
+        "acc": 0.2887383573243014,
+        "multilabel_rate": 0.6223539373412362,
+        "coverage": 0.9974597798475868
+      },
+      "elapsed_s": 1191.6
+    },
+    {
+      "meeting": "R8008_M8013",
+      "true_k": 3,
+      "n_chunks": 2137,
+      "k_auto": 3,
+      "dense_k": 3,
+      "eigvals": [
+        -0.0,
+        0.0062,
+        0.0189,
+        0.1522,
+        0.1688,
+        0.1958,
+        0.2387,
+        0.2503
+      ],
+      "auto": {
+        "acc": 0.5013661202185792,
+        "n_pred_speakers": 3,
+        "coverage": 0.9153005464480874
+      },
+      "true_k_forced": {
+        "acc": 0.5013661202185792,
+        "n_pred_speakers": 3,
+        "coverage": 0.9153005464480874
+      },
+      "ahc": {
+        "acc": 0.32650273224043713,
+        "n_pred_speakers": 1,
+        "coverage": 0.9153005464480874
+      },
+      "ahc_true": {
+        "acc": 0.3292349726775956,
+        "n_pred_speakers": 3,
+        "coverage": 0.9153005464480874
+      },
+      "k_ahc": 1,
+      "refined": {
+        "acc": 0.5450819672131147,
+        "n_pred_speakers": 3,
+        "coverage": 0.796448087431694
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.46311475409836067,
+        "multilabel_rate": 0.25956284153005466,
+        "coverage": 1.0
+      },
+      "post_true": {
+        "acc": 0.46311475409836067,
+        "multilabel_rate": 0.25956284153005466,
+        "coverage": 1.0
+      },
+      "elapsed_s": 629.9
+    },
+    {
+      "meeting": "R8001_M8004",
+      "true_k": 4,
+      "n_chunks": 1424,
+      "k_auto": 4,
+      "dense_k": 5,
+      "eigvals": [
+        0.0,
+        0.005,
+        0.0096,
+        0.0119,
+        0.0809,
+        0.1381,
+        0.1803,
+        0.1942
+      ],
+      "auto": {
+        "acc": 0.3758278145695364,
+        "n_pred_speakers": 4,
+        "coverage": 0.8394039735099338
+      },
+      "true_k_forced": {
+        "acc": 0.3758278145695364,
+        "n_pred_speakers": 4,
+        "coverage": 0.8394039735099338
+      },
+      "ahc": {
+        "acc": 0.3294701986754967,
+        "n_pred_speakers": 3,
+        "coverage": 0.8394039735099338
+      },
+      "ahc_true": {
+        "acc": 0.3294701986754967,
+        "n_pred_speakers": 3,
+        "coverage": 0.8394039735099338
+      },
+      "k_ahc": 3,
+      "refined": {
+        "acc": 0.41887417218543044,
+        "n_pred_speakers": 5,
+        "coverage": 0.9850993377483444
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.3195364238410596,
+        "multilabel_rate": 0.4586092715231788,
+        "coverage": 1.0
+      },
+      "post_true": {
+        "acc": 0.3195364238410596,
+        "multilabel_rate": 0.4586092715231788,
+        "coverage": 1.0
+      },
+      "elapsed_s": 746.0
+    }
+  ]
+}

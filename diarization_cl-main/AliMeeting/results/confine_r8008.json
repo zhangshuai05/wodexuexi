@@ -1,0 +1,65 @@
+{
+  "config": {
+    "chunk_s": 1.5,
+    "step_s": 0.75,
+    "knn_k": 8,
+    "max_k": 15,
+    "note": "谱聚类 k-NN 图 + eigengap 定 K；纯 scipy"
+  },
+  "rows": [
+    {
+      "meeting": "R8008_M8013",
+      "true_k": 3,
+      "n_chunks": 2127,
+      "k_auto": 3,
+      "eigvals": [
+        0.0,
+        0.006,
+        0.0188,
+        0.1621,
+        0.1764,
+        0.1866,
+        0.226,
+        0.2562
+      ],
+      "auto": {
+        "acc": 0.505464480874317,
+        "n_pred_speakers": 3,
+        "coverage": 0.9112021857923497
+      },
+      "true_k_forced": {
+        "acc": 0.505464480874317,
+        "n_pred_speakers": 3,
+        "coverage": 0.9112021857923497
+      },
+      "ahc": {
+        "acc": 0.32650273224043713,
+        "n_pred_speakers": 1,
+        "coverage": 0.9112021857923497
+      },
+      "ahc_true": {
+        "acc": 0.32786885245901637,
+        "n_pred_speakers": 2,
+        "coverage": 0.9112021857923497
+      },
+      "k_ahc": 1,
+      "refined": {
+        "acc": 0.4030054644808743,
+        "n_pred_speakers": 3,
+        "coverage": 0.51775956284153
+      },
+      "refined_confined": {
+        "acc": 0.40027322404371585,
+        "n_pred_speakers": 3,
+        "coverage": 0.4562841530054645
+      },
+      "confine_kept": [
+        3916,
+        4480
+      ],
+      "post_auto": null,
+      "post_true": null,
+      "elapsed_s": 136.7
+    }
+  ]
+}

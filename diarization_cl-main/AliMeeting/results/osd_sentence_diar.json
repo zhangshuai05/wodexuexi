@@ -1,0 +1,37 @@
+{
+  "config": {
+    "osd_model": "D:\\yinp\\pyannote_seg3\\model.onnx",
+    "osd_th": 0.3,
+    "anchor_ov": 0.3,
+    "anchor_pure_s": 1.2,
+    "note": "oracle 用真值剔重叠，是诊断上界"
+  },
+  "rows": [
+    {
+      "meeting": "R8007_M8010",
+      "n_turns": 1181,
+      "full": {
+        "acc": 0.24042145593869732,
+        "k": 1,
+        "n_anchor": 598,
+        "coverage": 1.0,
+        "note": "全量直接聚类"
+      },
+      "osd": {
+        "acc": 0.23904761904761904,
+        "k": 1,
+        "n_anchor": 0,
+        "coverage": 1.0,
+        "note": "锚点不足"
+      },
+      "oracle": {
+        "acc": 0.0,
+        "k": 1,
+        "n_anchor": 27,
+        "coverage": 1.0,
+        "note": "锚点聚类塌陷"
+      },
+      "elapsed_s": 200.7
+    }
+  ]
+}

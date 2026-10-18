@@ -1,0 +1,463 @@
+{
+  "config": {
+    "chunk_s": 1.5,
+    "step_s": 0.75,
+    "knn_k": 8,
+    "max_k": 15,
+    "arm": "class",
+    "post": true,
+    "normalize_peak": 0.85,
+    "refine_confine": false,
+    "note": "2026-10-18 解冻新基线：arm=class + post + normalize_peak=0.85（只提拉）；R8007_M8010/R8008_M8013 来自收紧救援前的同一轮跑批（两者 dense_k<=长窗K，未触发救援，数值不受影响）；其余 6 场来自收紧后的跑批。"
+  },
+  "rows": [
+    {
+      "meeting": "R8007_M8010",
+      "true_k": 4,
+      "n_chunks": 1525,
+      "k_auto": 5,
+      "dense_k": 4,
+      "eigvals": [
+        0.0,
+        0.0153,
+        0.0273,
+        0.1001,
+        0.1406,
+        0.2149,
+        0.2605,
+        0.2636
+      ],
+      "auto": {
+        "acc": 0.26164267569856053,
+        "n_pred_speakers": 5,
+        "coverage": 0.8289585097375106
+      },
+      "true_k_forced": {
+        "acc": 0.2726502963590178,
+        "n_pred_speakers": 4,
+        "coverage": 0.8289585097375106
+      },
+      "ahc": {
+        "acc": 0.2235393734123624,
+        "n_pred_speakers": 2,
+        "coverage": 0.8289585097375106
+      },
+      "ahc_true": {
+        "acc": 0.23539373412362405,
+        "n_pred_speakers": 4,
+        "coverage": 0.8289585097375106
+      },
+      "k_ahc": 2,
+      "refined": {
+        "acc": 0.31583403895004236,
+        "n_pred_speakers": 5,
+        "coverage": 1.0
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.2802709568162574,
+        "multilabel_rate": 0.6477561388653683,
+        "coverage": 0.9974597798475868
+      },
+      "post_true": {
+        "acc": 0.2887383573243014,
+        "multilabel_rate": 0.6223539373412362,
+        "coverage": 0.9974597798475868
+      },
+      "elapsed_s": 1191.6
+    },
+    {
+      "meeting": "R8008_M8013",
+      "true_k": 3,
+      "n_chunks": 2137,
+      "k_auto": 3,
+      "dense_k": 3,
+      "eigvals": [
+        -0.0,
+        0.0062,
+        0.0189,
+        0.1522,
+        0.1688,
+        0.1958,
+        0.2387,
+        0.2503
+      ],
+      "auto": {
+        "acc": 0.5013661202185792,
+        "n_pred_speakers": 3,
+        "coverage": 0.9153005464480874
+      },
+      "true_k_forced": {
+        "acc": 0.5013661202185792,
+        "n_pred_speakers": 3,
+        "coverage": 0.9153005464480874
+      },
+      "ahc": {
+        "acc": 0.32650273224043713,
+        "n_pred_speakers": 1,
+        "coverage": 0.9153005464480874
+      },
+      "ahc_true": {
+        "acc": 0.3292349726775956,
+        "n_pred_speakers": 3,
+        "coverage": 0.9153005464480874
+      },
+      "k_ahc": 1,
+      "refined": {
+        "acc": 0.5450819672131147,
+        "n_pred_speakers": 3,
+        "coverage": 0.796448087431694
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.46311475409836067,
+        "multilabel_rate": 0.25956284153005466,
+        "coverage": 1.0
+      },
+      "post_true": {
+        "acc": 0.46311475409836067,
+        "multilabel_rate": 0.25956284153005466,
+        "coverage": 1.0
+      },
+      "elapsed_s": 629.9
+    },
+    {
+      "meeting": "R8001_M8004",
+      "true_k": 4,
+      "n_chunks": 1424,
+      "k_auto": 4,
+      "dense_k": 5,
+      "eigvals": [
+        0.0,
+        0.005,
+        0.0096,
+        0.0119,
+        0.0809,
+        0.1381,
+        0.1803,
+        0.1942
+      ],
+      "auto": {
+        "acc": 0.3758278145695364,
+        "n_pred_speakers": 4,
+        "coverage": 0.8394039735099338
+      },
+      "true_k_forced": {
+        "acc": 0.3758278145695364,
+        "n_pred_speakers": 4,
+        "coverage": 0.8394039735099338
+      },
+      "ahc": {
+        "acc": 0.3294701986754967,
+        "n_pred_speakers": 3,
+        "coverage": 0.8394039735099338
+      },
+      "ahc_true": {
+        "acc": 0.3294701986754967,
+        "n_pred_speakers": 3,
+        "coverage": 0.8394039735099338
+      },
+      "k_ahc": 3,
+      "refined": {
+        "acc": 0.48509933774834435,
+        "n_pred_speakers": 4,
+        "coverage": 0.9850993377483444
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.3195364238410596,
+        "multilabel_rate": 0.4586092715231788,
+        "coverage": 1.0
+      },
+      "post_true": {
+        "acc": 0.3195364238410596,
+        "multilabel_rate": 0.4586092715231788,
+        "coverage": 1.0
+      },
+      "elapsed_s": 735.1
+    },
+    {
+      "meeting": "R8003_M8001",
+      "true_k": 4,
+      "n_chunks": 1943,
+      "k_auto": 4,
+      "dense_k": 4,
+      "eigvals": [
+        0.0,
+        0.002,
+        0.0037,
+        0.0082,
+        0.1278,
+        0.1393,
+        0.1867,
+        0.1921
+      ],
+      "auto": {
+        "acc": 0.4198813056379822,
+        "n_pred_speakers": 4,
+        "coverage": 0.8501483679525222
+      },
+      "true_k_forced": {
+        "acc": 0.4198813056379822,
+        "n_pred_speakers": 4,
+        "coverage": 0.8501483679525222
+      },
+      "ahc": {
+        "acc": 0.34718100890207715,
+        "n_pred_speakers": 2,
+        "coverage": 0.8501483679525222
+      },
+      "ahc_true": {
+        "acc": 0.3798219584569733,
+        "n_pred_speakers": 3,
+        "coverage": 0.8501483679525222
+      },
+      "k_ahc": 2,
+      "refined": {
+        "acc": 0.5089020771513353,
+        "n_pred_speakers": 4,
+        "coverage": 0.9925816023738873
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.4228486646884273,
+        "multilabel_rate": 0.3219584569732938,
+        "coverage": 1.0
+      },
+      "post_true": {
+        "acc": 0.4228486646884273,
+        "multilabel_rate": 0.3219584569732938,
+        "coverage": 1.0
+      },
+      "elapsed_s": 977.9
+    },
+    {
+      "meeting": "R8007_M8011",
+      "true_k": 4,
+      "n_chunks": 1708,
+      "k_auto": 4,
+      "dense_k": 4,
+      "eigvals": [
+        0.0,
+        0.0047,
+        0.0095,
+        0.0315,
+        0.1204,
+        0.1739,
+        0.1956,
+        0.2178
+      ],
+      "auto": {
+        "acc": 0.3815104166666667,
+        "n_pred_speakers": 4,
+        "coverage": 0.7734375
+      },
+      "true_k_forced": {
+        "acc": 0.3815104166666667,
+        "n_pred_speakers": 4,
+        "coverage": 0.7734375
+      },
+      "ahc": {
+        "acc": 0.3177083333333333,
+        "n_pred_speakers": 2,
+        "coverage": 0.7734375
+      },
+      "ahc_true": {
+        "acc": 0.3515625,
+        "n_pred_speakers": 4,
+        "coverage": 0.7734375
+      },
+      "k_ahc": 2,
+      "refined": {
+        "acc": 0.5130208333333334,
+        "n_pred_speakers": 4,
+        "coverage": 1.0
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.3528645833333333,
+        "multilabel_rate": 0.46875,
+        "coverage": 0.9973958333333334
+      },
+      "post_true": {
+        "acc": 0.3528645833333333,
+        "multilabel_rate": 0.46875,
+        "coverage": 0.9973958333333334
+      },
+      "elapsed_s": 983.0
+    },
+    {
+      "meeting": "R8009_M8018",
+      "true_k": 2,
+      "n_chunks": 1625,
+      "k_auto": 2,
+      "dense_k": 2,
+      "eigvals": [
+        -0.0,
+        0.0027,
+        0.1845,
+        0.2184,
+        0.2286,
+        0.2675,
+        0.2853,
+        0.3118
+      ],
+      "auto": {
+        "acc": 0.7338345864661654,
+        "n_pred_speakers": 2,
+        "coverage": 0.9593984962406015
+      },
+      "true_k_forced": {
+        "acc": 0.7338345864661654,
+        "n_pred_speakers": 2,
+        "coverage": 0.9593984962406015
+      },
+      "ahc": {
+        "acc": 0.5864661654135338,
+        "n_pred_speakers": 1,
+        "coverage": 0.9593984962406015
+      },
+      "ahc_true": {
+        "acc": 0.5864661654135338,
+        "n_pred_speakers": 1,
+        "coverage": 0.9593984962406015
+      },
+      "k_ahc": 1,
+      "refined": {
+        "acc": 0.7909774436090226,
+        "n_pred_speakers": 2,
+        "coverage": 1.0
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.750375939849624,
+        "multilabel_rate": 0.10676691729323308,
+        "coverage": 1.0
+      },
+      "post_true": {
+        "acc": 0.750375939849624,
+        "multilabel_rate": 0.10676691729323308,
+        "coverage": 1.0
+      },
+      "elapsed_s": 869.0
+    },
+    {
+      "meeting": "R8009_M8019",
+      "true_k": 2,
+      "n_chunks": 1877,
+      "k_auto": 2,
+      "dense_k": 2,
+      "eigvals": [
+        -0.0,
+        0.0038,
+        0.1394,
+        0.1551,
+        0.1797,
+        0.2326,
+        0.2402,
+        0.26
+      ],
+      "auto": {
+        "acc": 0.8394160583941606,
+        "n_pred_speakers": 2,
+        "coverage": 0.9624608967674662
+      },
+      "true_k_forced": {
+        "acc": 0.8394160583941606,
+        "n_pred_speakers": 2,
+        "coverage": 0.9624608967674662
+      },
+      "ahc": {
+        "acc": 0.8383733055265902,
+        "n_pred_speakers": 2,
+        "coverage": 0.9624608967674662
+      },
+      "ahc_true": {
+        "acc": 0.8383733055265902,
+        "n_pred_speakers": 2,
+        "coverage": 0.9624608967674662
+      },
+      "k_ahc": 2,
+      "refined": {
+        "acc": 0.8706986444212722,
+        "n_pred_speakers": 2,
+        "coverage": 0.9989572471324296
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.835245046923879,
+        "multilabel_rate": 0.1689259645464025,
+        "coverage": 1.0
+      },
+      "post_true": {
+        "acc": 0.835245046923879,
+        "multilabel_rate": 0.1689259645464025,
+        "coverage": 1.0
+      },
+      "elapsed_s": 808.4
+    },
+    {
+      "meeting": "R8009_M8020",
+      "true_k": 2,
+      "n_chunks": 1921,
+      "k_auto": 2,
+      "dense_k": 2,
+      "eigvals": [
+        -0.0,
+        0.0027,
+        0.1832,
+        0.2163,
+        0.2467,
+        0.2519,
+        0.2603,
+        0.2864
+      ],
+      "auto": {
+        "acc": 0.8089244851258581,
+        "n_pred_speakers": 2,
+        "coverage": 0.965675057208238
+      },
+      "true_k_forced": {
+        "acc": 0.8089244851258581,
+        "n_pred_speakers": 2,
+        "coverage": 0.965675057208238
+      },
+      "ahc": {
+        "acc": 0.8066361556064073,
+        "n_pred_speakers": 2,
+        "coverage": 0.965675057208238
+      },
+      "ahc_true": {
+        "acc": 0.8066361556064073,
+        "n_pred_speakers": 2,
+        "coverage": 0.965675057208238
+      },
+      "k_ahc": 2,
+      "refined": {
+        "acc": 0.851258581235698,
+        "n_pred_speakers": 2,
+        "coverage": 0.9988558352402745
+      },
+      "refined_confined": null,
+      "confine_kept": null,
+      "post_auto": {
+        "acc": 0.7871853546910755,
+        "multilabel_rate": 0.09610983981693363,
+        "coverage": 1.0
+      },
+      "post_true": {
+        "acc": 0.7871853546910755,
+        "multilabel_rate": 0.09610983981693363,
+        "coverage": 1.0
+      },
+      "elapsed_s": 717.2
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "table": {
+    "v12|greedy|speech|0.25": {
+      "der": 0.3539375,
+      "miss_rate": 0.015950000000000002,
+      "false_alarm_rate": 0.0371875,
+      "confusion_rate": 0.3008125
+    },
+    "v12|greedy|speech|0.0": {
+      "der": 0.45661250000000003,
+      "miss_rate": 0.020325,
+      "false_alarm_rate": 0.07125,
+      "confusion_rate": 0.36505
+    },
+    "v12|greedy|duration|0.25": {
+      "der": 0.22115,
+      "miss_rate": 0.0108375,
+      "false_alarm_rate": 0.024462499999999998,
+      "confusion_rate": 0.1858625
+    },
+    "v12|greedy|duration|0.0": {
+      "der": 0.42865,
+      "miss_rate": 0.0185875,
+      "false_alarm_rate": 0.06467500000000001,
+      "confusion_rate": 0.3453625
+    },
+    "v12|hungarian|speech|0.25": {
+      "der": 0.3539375,
+      "miss_rate": 0.015950000000000002,
+      "false_alarm_rate": 0.0371875,
+      "confusion_rate": 0.3008125
+    },
+    "v12|hungarian|speech|0.0": {
+      "der": 0.45661250000000003,
+      "miss_rate": 0.020325,
+      "false_alarm_rate": 0.07125,
+      "confusion_rate": 0.36505
+    },
+    "v12|hungarian|duration|0.25": {
+      "der": 0.22115,
+      "miss_rate": 0.0108375,
+      "false_alarm_rate": 0.024462499999999998,
+      "confusion_rate": 0.1858625
+    },
+    "v12|hungarian|duration|0.0": {
+      "der": 0.42865,
+      "miss_rate": 0.0185875,
+      "false_alarm_rate": 0.06467500000000001,
+      "confusion_rate": 0.3453625
+    },
+    "baseline|greedy|speech|0.25": {
+      "der": 0.391425,
+      "miss_rate": 0.10525000000000001,
+      "false_alarm_rate": 0.03605,
+      "confusion_rate": 0.2501375
+    },
+    "baseline|greedy|speech|0.0": {
+      "der": 0.4927,
+      "miss_rate": 0.1119625,
+      "false_alarm_rate": 0.06771250000000001,
+      "confusion_rate": 0.31303749999999997
+    },
+    "baseline|greedy|duration|0.25": {
+      "der": 0.2472125,
+      "miss_rate": 0.07145,
+      "false_alarm_rate": 0.023625,
+      "confusion_rate": 0.152175
+    },
+    "baseline|greedy|duration|0.0": {
+      "der": 0.4596125,
+      "miss_rate": 0.1019125,
+      "false_alarm_rate": 0.061425,
+      "confusion_rate": 0.29626250000000004
+    },
+    "baseline|hungarian|speech|0.25": {
+      "der": 0.391425,
+      "miss_rate": 0.10525000000000001,
+      "false_alarm_rate": 0.03605,
+      "confusion_rate": 0.2501375
+    },
+    "baseline|hungarian|speech|0.0": {
+      "der": 0.4927,
+      "miss_rate": 0.1119625,
+      "false_alarm_rate": 0.06771250000000001,
+      "confusion_rate": 0.31303749999999997
+    },
+    "baseline|hungarian|duration|0.25": {
+      "der": 0.2472125,
+      "miss_rate": 0.07145,
+      "false_alarm_rate": 0.023625,
+      "confusion_rate": 0.152175
+    },
+    "baseline|hungarian|duration|0.0": {
+      "der": 0.4596125,
+      "miss_rate": 0.1019125,
+      "false_alarm_rate": 0.061425,
+      "confusion_rate": 0.29626250000000004
+    }
+  },
+  "official": {
+    "baseline_eval_far_collar025": 0.1524,
+    "baseline_eval_far_collar0": 0.2452,
+    "royalflush_fusion_eval_far": 0.063,
+    "winner_A41_test_far": 0.0298
+  }
+}

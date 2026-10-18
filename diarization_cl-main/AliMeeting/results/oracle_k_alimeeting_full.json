@@ -1,0 +1,1758 @@
+{
+  "config": {
+    "corpus": "AliMeeting Eval (far-field, ch0, mono)",
+    "seconds": "full",
+    "collar": 0.25,
+    "note": "true-K 是诊断上界，用了参考人数先验，不得当作可达收益"
+  },
+  "rows": [
+    {
+      "meeting": "R8001_M8004",
+      "true_k": 4,
+      "auto_k": 1,
+      "n_windows": 1415,
+      "elapsed_s": 90.3,
+      "dropped": 10,
+      "candidates": [
+        {
+          "k": 1,
+          "score": 0.0,
+          "objective": 0.0,
+          "eligible": true,
+          "sizes": [
+            1415
+          ]
+        },
+        {
+          "k": 2,
+          "score": -1.0,
+          "objective": -1.0,
+          "eligible": false,
+          "sizes": [
+            5,
+            1410
+          ]
+        },
+        {
+          "k": 3,
+          "score": -1.0,
+          "objective": -1.005,
+          "eligible": false,
+          "sizes": [
+            5,
+            916,
+            494
+          ]
+        },
+        {
+          "k": 4,
+          "score": -1.0,
+          "objective": -1.01,
+          "eligible": false,
+          "sizes": [
+            5,
+            914,
+            494,
+            2
+          ]
+        },
+        {
+          "k": 5,
+          "score": -1.0,
+          "objective": -1.015,
+          "eligible": false,
+          "sizes": [
+            5,
+            583,
+            494,
+            331,
+            2
+          ]
+        },
+        {
+          "k": 6,
+          "score": -1.0,
+          "objective": -1.02,
+          "eligible": false,
+          "sizes": [
+            5,
+            581,
+            494,
+            331,
+            2,
+            2
+          ]
+        },
+        {
+          "k": 7,
+          "score": -1.0,
+          "objective": -1.025,
+          "eligible": false,
+          "sizes": [
+            5,
+            581,
+            302,
+            192,
+            331,
+            2,
+            2
+          ]
+        },
+        {
+          "k": 8,
+          "score": -1.0,
+          "objective": -1.03,
+          "eligible": false,
+          "sizes": [
+            5,
+            581,
+            302,
+            188,
+            4,
+            331,
+            2,
+            2
+          ]
+        },
+        {
+          "k": 9,
+          "score": -1.0,
+          "objective": -1.035,
+          "eligible": false,
+          "sizes": [
+            5,
+            577,
+            302,
+            188,
+            4,
+            331,
+            4,
+            2,
+            2
+          ]
+        },
+        {
+          "k": 10,
+          "score": -1.0,
+          "objective": -1.04,
+          "eligible": false,
+          "sizes": [
+            5,
+            563,
+            302,
+            188,
+            4,
+            331,
+            4,
+            2,
+            14,
+            2
+          ]
+        }
+      ],
+      "der_auto": {
+        "total_frames": 103882,
+        "missed": 1597,
+        "false_alarm": 4152,
+        "confusion": 66620,
+        "miss_rate": 0.0154,
+        "false_alarm_rate": 0.04,
+        "confusion_rate": 0.6413,
+        "der": 0.6966,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 1,
+        "mapping": {
+          "auto_0": "N_SPK8013"
+        },
+        "missed_overlap": 127,
+        "missed_overlap_rate": 0.0012,
+        "missed_single": 1470,
+        "missed_single_rate": 0.0142,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 4152,
+        "false_alarm_single_rate": 0.04,
+        "confusion_overlap": 20492,
+        "confusion_overlap_rate": 0.1973,
+        "confusion_single": 46128,
+        "confusion_single_rate": 0.444
+      },
+      "der_true_k": {
+        "total_frames": 103882,
+        "missed": 8688,
+        "false_alarm": 4104,
+        "confusion": 40559,
+        "miss_rate": 0.0836,
+        "false_alarm_rate": 0.0395,
+        "confusion_rate": 0.3904,
+        "der": 0.5136,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 3,
+        "mapping": {
+          "truek_1": "N_SPK8013",
+          "truek_2": "N_SPK8014"
+        },
+        "missed_overlap": 2454,
+        "missed_overlap_rate": 0.0236,
+        "missed_single": 6234,
+        "missed_single_rate": 0.06,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 4104,
+        "false_alarm_single_rate": 0.0395,
+        "confusion_overlap": 18165,
+        "confusion_overlap_rate": 0.1749,
+        "confusion_single": 22394,
+        "confusion_single_rate": 0.2156
+      },
+      "der_reference": {
+        "total_frames": 103882,
+        "missed": 0,
+        "false_alarm": 0,
+        "confusion": 0,
+        "miss_rate": 0.0,
+        "false_alarm_rate": 0.0,
+        "confusion_rate": 0.0,
+        "der": 0.0,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 4,
+        "mapping": {
+          "ref_N_SPK8013": "N_SPK8013",
+          "ref_N_SPK8014": "N_SPK8014",
+          "ref_N_SPK8015": "N_SPK8015",
+          "ref_N_SPK8016": "N_SPK8016"
+        }
+      }
+    },
+    {
+      "meeting": "R8003_M8001",
+      "true_k": 4,
+      "auto_k": 3,
+      "n_windows": 1961,
+      "elapsed_s": 103.0,
+      "dropped": 47,
+      "candidates": [
+        {
+          "k": 1,
+          "score": 0.0,
+          "objective": 0.0,
+          "eligible": true,
+          "sizes": [
+            1961
+          ]
+        },
+        {
+          "k": 2,
+          "score": 0.3257,
+          "objective": 0.3257,
+          "eligible": true,
+          "sizes": [
+            754,
+            1207
+          ]
+        },
+        {
+          "k": 3,
+          "score": 0.3498,
+          "objective": 0.3448,
+          "eligible": true,
+          "sizes": [
+            754,
+            950,
+            257
+          ]
+        },
+        {
+          "k": 4,
+          "score": -1.0,
+          "objective": -1.01,
+          "eligible": false,
+          "sizes": [
+            750,
+            950,
+            257,
+            4
+          ]
+        },
+        {
+          "k": 5,
+          "score": -1.0,
+          "objective": -1.015,
+          "eligible": false,
+          "sizes": [
+            750,
+            611,
+            257,
+            339,
+            4
+          ]
+        },
+        {
+          "k": 6,
+          "score": -1.0,
+          "objective": -1.02,
+          "eligible": false,
+          "sizes": [
+            750,
+            608,
+            3,
+            257,
+            339,
+            4
+          ]
+        },
+        {
+          "k": 7,
+          "score": -1.0,
+          "objective": -1.025,
+          "eligible": false,
+          "sizes": [
+            749,
+            608,
+            3,
+            257,
+            339,
+            4,
+            1
+          ]
+        },
+        {
+          "k": 8,
+          "score": -1.0,
+          "objective": -1.03,
+          "eligible": false,
+          "sizes": [
+            749,
+            608,
+            3,
+            255,
+            339,
+            4,
+            2,
+            1
+          ]
+        },
+        {
+          "k": 9,
+          "score": -1.0,
+          "objective": -1.035,
+          "eligible": false,
+          "sizes": [
+            749,
+            608,
+            3,
+            252,
+            339,
+            4,
+            2,
+            3,
+            1
+          ]
+        },
+        {
+          "k": 10,
+          "score": -1.0,
+          "objective": -1.04,
+          "eligible": false,
+          "sizes": [
+            749,
+            608,
+            3,
+            247,
+            339,
+            4,
+            2,
+            3,
+            1,
+            5
+          ]
+        }
+      ],
+      "der_auto": {
+        "total_frames": 141473,
+        "missed": 5207,
+        "false_alarm": 9813,
+        "confusion": 36453,
+        "miss_rate": 0.0368,
+        "false_alarm_rate": 0.0694,
+        "confusion_rate": 0.2577,
+        "der": 0.3638,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 3,
+        "mapping": {
+          "auto_1": "N_SPK8004",
+          "auto_0": "N_SPK8003",
+          "auto_2": "N_SPK8002"
+        },
+        "missed_overlap": 747,
+        "missed_overlap_rate": 0.0053,
+        "missed_single": 4460,
+        "missed_single_rate": 0.0315,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 9813,
+        "false_alarm_single_rate": 0.0694,
+        "confusion_overlap": 11644,
+        "confusion_overlap_rate": 0.0823,
+        "confusion_single": 24809,
+        "confusion_single_rate": 0.1754
+      },
+      "der_true_k": {
+        "total_frames": 141473,
+        "missed": 5405,
+        "false_alarm": 9719,
+        "confusion": 36255,
+        "miss_rate": 0.0382,
+        "false_alarm_rate": 0.0687,
+        "confusion_rate": 0.2563,
+        "der": 0.3632,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 3,
+        "mapping": {
+          "truek_1": "N_SPK8004",
+          "truek_0": "N_SPK8003",
+          "truek_2": "N_SPK8002"
+        },
+        "missed_overlap": 900,
+        "missed_overlap_rate": 0.0064,
+        "missed_single": 4505,
+        "missed_single_rate": 0.0318,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 9719,
+        "false_alarm_single_rate": 0.0687,
+        "confusion_overlap": 11491,
+        "confusion_overlap_rate": 0.0812,
+        "confusion_single": 24764,
+        "confusion_single_rate": 0.175
+      },
+      "der_reference": {
+        "total_frames": 141473,
+        "missed": 0,
+        "false_alarm": 0,
+        "confusion": 0,
+        "miss_rate": 0.0,
+        "false_alarm_rate": 0.0,
+        "confusion_rate": 0.0,
+        "der": 0.0,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 4,
+        "mapping": {
+          "ref_N_SPK8004": "N_SPK8004",
+          "ref_N_SPK8003": "N_SPK8003",
+          "ref_N_SPK8002": "N_SPK8002",
+          "ref_N_SPK8001": "N_SPK8001"
+        }
+      }
+    },
+    {
+      "meeting": "R8007_M8010",
+      "true_k": 4,
+      "auto_k": 1,
+      "n_windows": 1851,
+      "elapsed_s": 72.3,
+      "dropped": 0,
+      "candidates": [
+        {
+          "k": 1,
+          "score": 0.0,
+          "objective": 0.0,
+          "eligible": true,
+          "sizes": [
+            1851
+          ]
+        },
+        {
+          "k": 2,
+          "score": -1.0,
+          "objective": -1.0,
+          "eligible": false,
+          "sizes": [
+            1848,
+            3
+          ]
+        },
+        {
+          "k": 3,
+          "score": -1.0,
+          "objective": -1.005,
+          "eligible": false,
+          "sizes": [
+            1848,
+            1,
+            2
+          ]
+        },
+        {
+          "k": 4,
+          "score": -1.0,
+          "objective": -1.01,
+          "eligible": false,
+          "sizes": [
+            1096,
+            752,
+            1,
+            2
+          ]
+        },
+        {
+          "k": 5,
+          "score": -1.0,
+          "objective": -1.015,
+          "eligible": false,
+          "sizes": [
+            1044,
+            752,
+            52,
+            1,
+            2
+          ]
+        },
+        {
+          "k": 6,
+          "score": -1.0,
+          "objective": -1.02,
+          "eligible": false,
+          "sizes": [
+            1043,
+            752,
+            52,
+            1,
+            2,
+            1
+          ]
+        },
+        {
+          "k": 7,
+          "score": -1.0,
+          "objective": -1.025,
+          "eligible": false,
+          "sizes": [
+            1040,
+            752,
+            52,
+            3,
+            1,
+            2,
+            1
+          ]
+        },
+        {
+          "k": 8,
+          "score": -1.0,
+          "objective": -1.03,
+          "eligible": false,
+          "sizes": [
+            470,
+            752,
+            570,
+            52,
+            3,
+            1,
+            2,
+            1
+          ]
+        },
+        {
+          "k": 9,
+          "score": -1.0,
+          "objective": -1.035,
+          "eligible": false,
+          "sizes": [
+            470,
+            752,
+            567,
+            52,
+            3,
+            1,
+            2,
+            3,
+            1
+          ]
+        },
+        {
+          "k": 10,
+          "score": -1.0,
+          "objective": -1.04,
+          "eligible": false,
+          "sizes": [
+            470,
+            745,
+            567,
+            52,
+            3,
+            7,
+            1,
+            2,
+            3,
+            1
+          ]
+        }
+      ],
+      "der_auto": {
+        "total_frames": 95026,
+        "missed": 8,
+        "false_alarm": 678,
+        "confusion": 76729,
+        "miss_rate": 0.0001,
+        "false_alarm_rate": 0.0071,
+        "confusion_rate": 0.8075,
+        "der": 0.8147,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 1,
+        "mapping": {
+          "auto_0": "N_SPK8054"
+        },
+        "missed_overlap": 8,
+        "missed_overlap_rate": 0.0001,
+        "missed_single": 0,
+        "missed_single_rate": 0.0,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 678,
+        "false_alarm_single_rate": 0.0071,
+        "confusion_overlap": 43753,
+        "confusion_overlap_rate": 0.4604,
+        "confusion_single": 32976,
+        "confusion_single_rate": 0.347
+      },
+      "der_true_k": {
+        "total_frames": 95026,
+        "missed": 10100,
+        "false_alarm": 552,
+        "confusion": 48861,
+        "miss_rate": 0.1063,
+        "false_alarm_rate": 0.0058,
+        "confusion_rate": 0.5142,
+        "der": 0.6263,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "truek_1": "N_SPK8054",
+          "truek_0": "N_SPK8056"
+        },
+        "missed_overlap": 7466,
+        "missed_overlap_rate": 0.0786,
+        "missed_single": 2634,
+        "missed_single_rate": 0.0277,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 552,
+        "false_alarm_single_rate": 0.0058,
+        "confusion_overlap": 36295,
+        "confusion_overlap_rate": 0.3819,
+        "confusion_single": 12566,
+        "confusion_single_rate": 0.1322
+      },
+      "der_reference": {
+        "total_frames": 95026,
+        "missed": 0,
+        "false_alarm": 0,
+        "confusion": 0,
+        "miss_rate": 0.0,
+        "false_alarm_rate": 0.0,
+        "confusion_rate": 0.0,
+        "der": 0.0,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 4,
+        "mapping": {
+          "ref_N_SPK8054": "N_SPK8054",
+          "ref_N_SPK8056": "N_SPK8056",
+          "ref_N_SPK8055": "N_SPK8055",
+          "ref_N_SPK8050": "N_SPK8050"
+        }
+      }
+    },
+    {
+      "meeting": "R8007_M8011",
+      "true_k": 4,
+      "auto_k": 2,
+      "n_windows": 1850,
+      "elapsed_s": 72.3,
+      "dropped": 30,
+      "candidates": [
+        {
+          "k": 1,
+          "score": 0.0,
+          "objective": 0.0,
+          "eligible": true,
+          "sizes": [
+            1850
+          ]
+        },
+        {
+          "k": 2,
+          "score": 0.3021,
+          "objective": 0.3021,
+          "eligible": true,
+          "sizes": [
+            518,
+            1332
+          ]
+        },
+        {
+          "k": 3,
+          "score": -1.0,
+          "objective": -1.005,
+          "eligible": false,
+          "sizes": [
+            518,
+            1331,
+            1
+          ]
+        },
+        {
+          "k": 4,
+          "score": -1.0,
+          "objective": -1.01,
+          "eligible": false,
+          "sizes": [
+            518,
+            921,
+            410,
+            1
+          ]
+        },
+        {
+          "k": 5,
+          "score": -1.0,
+          "objective": -1.015,
+          "eligible": false,
+          "sizes": [
+            518,
+            921,
+            409,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 6,
+          "score": -1.0,
+          "objective": -1.02,
+          "eligible": false,
+          "sizes": [
+            518,
+            917,
+            409,
+            1,
+            4,
+            1
+          ]
+        },
+        {
+          "k": 7,
+          "score": -1.0,
+          "objective": -1.025,
+          "eligible": false,
+          "sizes": [
+            518,
+            916,
+            1,
+            409,
+            1,
+            4,
+            1
+          ]
+        },
+        {
+          "k": 8,
+          "score": -1.0,
+          "objective": -1.03,
+          "eligible": false,
+          "sizes": [
+            518,
+            916,
+            1,
+            272,
+            137,
+            1,
+            4,
+            1
+          ]
+        },
+        {
+          "k": 9,
+          "score": -1.0,
+          "objective": -1.035,
+          "eligible": false,
+          "sizes": [
+            518,
+            916,
+            1,
+            272,
+            137,
+            1,
+            2,
+            1,
+            2
+          ]
+        },
+        {
+          "k": 10,
+          "score": -1.0,
+          "objective": -1.04,
+          "eligible": false,
+          "sizes": [
+            518,
+            913,
+            1,
+            272,
+            137,
+            3,
+            1,
+            2,
+            1,
+            2
+          ]
+        }
+      ],
+      "der_auto": {
+        "total_frames": 128456,
+        "missed": 2318,
+        "false_alarm": 1078,
+        "confusion": 48829,
+        "miss_rate": 0.018,
+        "false_alarm_rate": 0.0084,
+        "confusion_rate": 0.3801,
+        "der": 0.4066,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "auto_1": "N_SPK8068",
+          "auto_0": "N_SPK8066"
+        },
+        "missed_overlap": 1549,
+        "missed_overlap_rate": 0.0121,
+        "missed_single": 769,
+        "missed_single_rate": 0.006,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 1078,
+        "false_alarm_single_rate": 0.0084,
+        "confusion_overlap": 16051,
+        "confusion_overlap_rate": 0.125,
+        "confusion_single": 32778,
+        "confusion_single_rate": 0.2552
+      },
+      "der_true_k": {
+        "total_frames": 128456,
+        "missed": 6465,
+        "false_alarm": 1065,
+        "confusion": 27292,
+        "miss_rate": 0.0503,
+        "false_alarm_rate": 0.0083,
+        "confusion_rate": 0.2125,
+        "der": 0.2711,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 3,
+        "mapping": {
+          "truek_1": "N_SPK8068",
+          "truek_0": "N_SPK8066",
+          "truek_2": "N_SPK8067"
+        },
+        "missed_overlap": 2494,
+        "missed_overlap_rate": 0.0194,
+        "missed_single": 3971,
+        "missed_single_rate": 0.0309,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 1065,
+        "false_alarm_single_rate": 0.0083,
+        "confusion_overlap": 15106,
+        "confusion_overlap_rate": 0.1176,
+        "confusion_single": 12186,
+        "confusion_single_rate": 0.0949
+      },
+      "der_reference": {
+        "total_frames": 128456,
+        "missed": 0,
+        "false_alarm": 0,
+        "confusion": 0,
+        "miss_rate": 0.0,
+        "false_alarm_rate": 0.0,
+        "confusion_rate": 0.0,
+        "der": 0.0,
+        "n_ref_speakers": 4,
+        "n_pred_speakers": 4,
+        "mapping": {
+          "ref_N_SPK8068": "N_SPK8068",
+          "ref_N_SPK8066": "N_SPK8066",
+          "ref_N_SPK8067": "N_SPK8067",
+          "ref_N_SPK8069": "N_SPK8069"
+        }
+      }
+    },
+    {
+      "meeting": "R8008_M8013",
+      "true_k": 3,
+      "auto_k": 3,
+      "n_windows": 471,
+      "elapsed_s": 25.4,
+      "dropped": 118,
+      "candidates": [
+        {
+          "k": 1,
+          "score": 0.0,
+          "objective": 0.0,
+          "eligible": true,
+          "sizes": [
+            471
+          ]
+        },
+        {
+          "k": 2,
+          "score": 0.284,
+          "objective": 0.284,
+          "eligible": true,
+          "sizes": [
+            137,
+            334
+          ]
+        },
+        {
+          "k": 3,
+          "score": 0.3145,
+          "objective": 0.3095,
+          "eligible": true,
+          "sizes": [
+            53,
+            334,
+            84
+          ]
+        },
+        {
+          "k": 4,
+          "score": -1.0,
+          "objective": -1.01,
+          "eligible": false,
+          "sizes": [
+            53,
+            331,
+            84,
+            3
+          ]
+        },
+        {
+          "k": 5,
+          "score": -1.0,
+          "objective": -1.015,
+          "eligible": false,
+          "sizes": [
+            53,
+            327,
+            4,
+            84,
+            3
+          ]
+        },
+        {
+          "k": 6,
+          "score": -1.0,
+          "objective": -1.02,
+          "eligible": false,
+          "sizes": [
+            53,
+            324,
+            4,
+            84,
+            3,
+            3
+          ]
+        },
+        {
+          "k": 7,
+          "score": -1.0,
+          "objective": -1.025,
+          "eligible": false,
+          "sizes": [
+            50,
+            324,
+            4,
+            84,
+            3,
+            3,
+            3
+          ]
+        },
+        {
+          "k": 8,
+          "score": -1.0,
+          "objective": -1.03,
+          "eligible": false,
+          "sizes": [
+            50,
+            323,
+            4,
+            84,
+            3,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "k": 9,
+          "score": -1.0,
+          "objective": -1.035,
+          "eligible": false,
+          "sizes": [
+            50,
+            309,
+            14,
+            4,
+            84,
+            3,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "k": 10,
+          "score": -1.0,
+          "objective": -1.04,
+          "eligible": false,
+          "sizes": [
+            50,
+            309,
+            14,
+            4,
+            83,
+            1,
+            3,
+            1,
+            3,
+            3
+          ]
+        }
+      ],
+      "der_auto": {
+        "total_frames": 153376,
+        "missed": 96148,
+        "false_alarm": 4183,
+        "confusion": 21105,
+        "miss_rate": 0.6269,
+        "false_alarm_rate": 0.0273,
+        "confusion_rate": 0.1376,
+        "der": 0.7918,
+        "n_ref_speakers": 3,
+        "n_pred_speakers": 3,
+        "mapping": {
+          "auto_1": "N_SPK8048",
+          "auto_2": "N_SPK8049",
+          "auto_0": "N_SPK8047"
+        },
+        "missed_overlap": 8540,
+        "missed_overlap_rate": 0.0557,
+        "missed_single": 87608,
+        "missed_single_rate": 0.5712,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 4183,
+        "false_alarm_single_rate": 0.0273,
+        "confusion_overlap": 4439,
+        "confusion_overlap_rate": 0.0289,
+        "confusion_single": 16666,
+        "confusion_single_rate": 0.1087
+      },
+      "der_true_k": {
+        "total_frames": 153376,
+        "missed": 96148,
+        "false_alarm": 4183,
+        "confusion": 21105,
+        "miss_rate": 0.6269,
+        "false_alarm_rate": 0.0273,
+        "confusion_rate": 0.1376,
+        "der": 0.7918,
+        "n_ref_speakers": 3,
+        "n_pred_speakers": 3,
+        "mapping": {
+          "truek_1": "N_SPK8048",
+          "truek_2": "N_SPK8049",
+          "truek_0": "N_SPK8047"
+        },
+        "missed_overlap": 8540,
+        "missed_overlap_rate": 0.0557,
+        "missed_single": 87608,
+        "missed_single_rate": 0.5712,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 4183,
+        "false_alarm_single_rate": 0.0273,
+        "confusion_overlap": 4439,
+        "confusion_overlap_rate": 0.0289,
+        "confusion_single": 16666,
+        "confusion_single_rate": 0.1087
+      },
+      "der_reference": {
+        "total_frames": 153376,
+        "missed": 0,
+        "false_alarm": 0,
+        "confusion": 0,
+        "miss_rate": 0.0,
+        "false_alarm_rate": 0.0,
+        "confusion_rate": 0.0,
+        "der": 0.0,
+        "n_ref_speakers": 3,
+        "n_pred_speakers": 3,
+        "mapping": {
+          "ref_N_SPK8048": "N_SPK8048",
+          "ref_N_SPK8047": "N_SPK8047",
+          "ref_N_SPK8049": "N_SPK8049"
+        }
+      }
+    },
+    {
+      "meeting": "R8009_M8018",
+      "true_k": 2,
+      "auto_k": 2,
+      "n_windows": 1602,
+      "elapsed_s": 63.5,
+      "dropped": 31,
+      "candidates": [
+        {
+          "k": 1,
+          "score": 0.0,
+          "objective": 0.0,
+          "eligible": true,
+          "sizes": [
+            1602
+          ]
+        },
+        {
+          "k": 2,
+          "score": 0.4641,
+          "objective": 0.4641,
+          "eligible": true,
+          "sizes": [
+            930,
+            672
+          ]
+        },
+        {
+          "k": 3,
+          "score": -1.0,
+          "objective": -1.005,
+          "eligible": false,
+          "sizes": [
+            930,
+            671,
+            1
+          ]
+        },
+        {
+          "k": 4,
+          "score": -1.0,
+          "objective": -1.01,
+          "eligible": false,
+          "sizes": [
+            929,
+            671,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 5,
+          "score": -1.0,
+          "objective": -1.015,
+          "eligible": false,
+          "sizes": [
+            926,
+            671,
+            1,
+            3,
+            1
+          ]
+        },
+        {
+          "k": 6,
+          "score": -1.0,
+          "objective": -1.02,
+          "eligible": false,
+          "sizes": [
+            926,
+            670,
+            1,
+            3,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 7,
+          "score": -1.0,
+          "objective": -1.025,
+          "eligible": false,
+          "sizes": [
+            873,
+            670,
+            53,
+            1,
+            3,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 8,
+          "score": -1.0,
+          "objective": -1.03,
+          "eligible": false,
+          "sizes": [
+            871,
+            670,
+            53,
+            1,
+            3,
+            1,
+            1,
+            2
+          ]
+        },
+        {
+          "k": 9,
+          "score": -1.0,
+          "objective": -1.035,
+          "eligible": false,
+          "sizes": [
+            869,
+            670,
+            53,
+            1,
+            3,
+            1,
+            2,
+            1,
+            2
+          ]
+        },
+        {
+          "k": 10,
+          "score": -1.0,
+          "objective": -1.04,
+          "eligible": false,
+          "sizes": [
+            869,
+            667,
+            53,
+            1,
+            3,
+            3,
+            1,
+            2,
+            1,
+            2
+          ]
+        }
+      ],
+      "der_auto": {
+        "total_frames": 110851,
+        "missed": 2079,
+        "false_alarm": 4722,
+        "confusion": 6584,
+        "miss_rate": 0.0188,
+        "false_alarm_rate": 0.0426,
+        "confusion_rate": 0.0594,
+        "der": 0.1207,
+        "n_ref_speakers": 2,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "auto_0": "N_SPK8021",
+          "auto_1": "N_SPK8022"
+        },
+        "missed_overlap": 331,
+        "missed_overlap_rate": 0.003,
+        "missed_single": 1748,
+        "missed_single_rate": 0.0158,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 4722,
+        "false_alarm_single_rate": 0.0426,
+        "confusion_overlap": 2942,
+        "confusion_overlap_rate": 0.0265,
+        "confusion_single": 3642,
+        "confusion_single_rate": 0.0329
+      },
+      "der_true_k": {
+        "total_frames": 110851,
+        "missed": 2079,
+        "false_alarm": 4722,
+        "confusion": 6584,
+        "miss_rate": 0.0188,
+        "false_alarm_rate": 0.0426,
+        "confusion_rate": 0.0594,
+        "der": 0.1207,
+        "n_ref_speakers": 2,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "truek_0": "N_SPK8021",
+          "truek_1": "N_SPK8022"
+        },
+        "missed_overlap": 331,
+        "missed_overlap_rate": 0.003,
+        "missed_single": 1748,
+        "missed_single_rate": 0.0158,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 4722,
+        "false_alarm_single_rate": 0.0426,
+        "confusion_overlap": 2942,
+        "confusion_overlap_rate": 0.0265,
+        "confusion_single": 3642,
+        "confusion_single_rate": 0.0329
+      },
+      "der_reference": {
+        "total_frames": 110851,
+        "missed": 0,
+        "false_alarm": 0,
+        "confusion": 0,
+        "miss_rate": 0.0,
+        "false_alarm_rate": 0.0,
+        "confusion_rate": 0.0,
+        "der": 0.0,
+        "n_ref_speakers": 2,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "ref_N_SPK8021": "N_SPK8021",
+          "ref_N_SPK8022": "N_SPK8022"
+        }
+      }
+    },
+    {
+      "meeting": "R8009_M8019",
+      "true_k": 2,
+      "auto_k": 2,
+      "n_windows": 1876,
+      "elapsed_s": 75.0,
+      "dropped": 29,
+      "candidates": [
+        {
+          "k": 1,
+          "score": 0.0,
+          "objective": 0.0,
+          "eligible": true,
+          "sizes": [
+            1876
+          ]
+        },
+        {
+          "k": 2,
+          "score": 0.404,
+          "objective": 0.404,
+          "eligible": true,
+          "sizes": [
+            610,
+            1266
+          ]
+        },
+        {
+          "k": 3,
+          "score": -1.0,
+          "objective": -1.005,
+          "eligible": false,
+          "sizes": [
+            609,
+            1266,
+            1
+          ]
+        },
+        {
+          "k": 4,
+          "score": -1.0,
+          "objective": -1.01,
+          "eligible": false,
+          "sizes": [
+            608,
+            1266,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 5,
+          "score": -1.0,
+          "objective": -1.015,
+          "eligible": false,
+          "sizes": [
+            608,
+            1244,
+            22,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 6,
+          "score": -1.0,
+          "objective": -1.02,
+          "eligible": false,
+          "sizes": [
+            608,
+            1244,
+            21,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 7,
+          "score": -1.0,
+          "objective": -1.025,
+          "eligible": false,
+          "sizes": [
+            606,
+            1244,
+            21,
+            1,
+            1,
+            2,
+            1
+          ]
+        },
+        {
+          "k": 8,
+          "score": -1.0,
+          "objective": -1.03,
+          "eligible": false,
+          "sizes": [
+            599,
+            1244,
+            21,
+            1,
+            7,
+            1,
+            2,
+            1
+          ]
+        },
+        {
+          "k": 9,
+          "score": -1.0,
+          "objective": -1.035,
+          "eligible": false,
+          "sizes": [
+            599,
+            1228,
+            21,
+            16,
+            1,
+            7,
+            1,
+            2,
+            1
+          ]
+        },
+        {
+          "k": 10,
+          "score": -1.0,
+          "objective": -1.04,
+          "eligible": false,
+          "sizes": [
+            599,
+            1227,
+            21,
+            16,
+            1,
+            7,
+            1,
+            1,
+            2,
+            1
+          ]
+        }
+      ],
+      "der_auto": {
+        "total_frames": 119318,
+        "missed": 2414,
+        "false_alarm": 7499,
+        "confusion": 11998,
+        "miss_rate": 0.0202,
+        "false_alarm_rate": 0.0628,
+        "confusion_rate": 0.1006,
+        "der": 0.1836,
+        "n_ref_speakers": 2,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "auto_1": "N_SPK8023",
+          "auto_0": "N_SPK8024"
+        },
+        "missed_overlap": 131,
+        "missed_overlap_rate": 0.0011,
+        "missed_single": 2283,
+        "missed_single_rate": 0.0191,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 7499,
+        "false_alarm_single_rate": 0.0628,
+        "confusion_overlap": 8738,
+        "confusion_overlap_rate": 0.0732,
+        "confusion_single": 3260,
+        "confusion_single_rate": 0.0273
+      },
+      "der_true_k": {
+        "total_frames": 119318,
+        "missed": 2414,
+        "false_alarm": 7499,
+        "confusion": 11998,
+        "miss_rate": 0.0202,
+        "false_alarm_rate": 0.0628,
+        "confusion_rate": 0.1006,
+        "der": 0.1836,
+        "n_ref_speakers": 2,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "truek_1": "N_SPK8023",
+          "truek_0": "N_SPK8024"
+        },
+        "missed_overlap": 131,
+        "missed_overlap_rate": 0.0011,
+        "missed_single": 2283,
+        "missed_single_rate": 0.0191,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 7499,
+        "false_alarm_single_rate": 0.0628,
+        "confusion_overlap": 8738,
+        "confusion_overlap_rate": 0.0732,
+        "confusion_single": 3260,
+        "confusion_single_rate": 0.0273
+      },
+      "der_reference": {
+        "total_frames": 119318,
+        "missed": 0,
+        "false_alarm": 0,
+        "confusion": 0,
+        "miss_rate": 0.0,
+        "false_alarm_rate": 0.0,
+        "confusion_rate": 0.0,
+        "der": 0.0,
+        "n_ref_speakers": 2,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "ref_N_SPK8023": "N_SPK8023",
+          "ref_N_SPK8024": "N_SPK8024"
+        }
+      }
+    },
+    {
+      "meeting": "R8009_M8020",
+      "true_k": 2,
+      "auto_k": 2,
+      "n_windows": 1878,
+      "elapsed_s": 72.2,
+      "dropped": 15,
+      "candidates": [
+        {
+          "k": 1,
+          "score": 0.0,
+          "objective": 0.0,
+          "eligible": true,
+          "sizes": [
+            1878
+          ]
+        },
+        {
+          "k": 2,
+          "score": 0.4624,
+          "objective": 0.4624,
+          "eligible": true,
+          "sizes": [
+            852,
+            1026
+          ]
+        },
+        {
+          "k": 3,
+          "score": -1.0,
+          "objective": -1.005,
+          "eligible": false,
+          "sizes": [
+            851,
+            1026,
+            1
+          ]
+        },
+        {
+          "k": 4,
+          "score": -1.0,
+          "objective": -1.01,
+          "eligible": false,
+          "sizes": [
+            850,
+            1026,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 5,
+          "score": -1.0,
+          "objective": -1.015,
+          "eligible": false,
+          "sizes": [
+            849,
+            1026,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 6,
+          "score": -1.0,
+          "objective": -1.02,
+          "eligible": false,
+          "sizes": [
+            795,
+            54,
+            1026,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "k": 7,
+          "score": -1.0,
+          "objective": -1.025,
+          "eligible": false,
+          "sizes": [
+            793,
+            54,
+            1026,
+            1,
+            1,
+            1,
+            2
+          ]
+        },
+        {
+          "k": 8,
+          "score": -1.0,
+          "objective": -1.03,
+          "eligible": false,
+          "sizes": [
+            792,
+            54,
+            1026,
+            1,
+            1,
+            1,
+            1,
+            2
+          ]
+        },
+        {
+          "k": 9,
+          "score": -1.0,
+          "objective": -1.035,
+          "eligible": false,
+          "sizes": [
+            792,
+            54,
+            1022,
+            1,
+            1,
+            1,
+            4,
+            1,
+            2
+          ]
+        },
+        {
+          "k": 10,
+          "score": -1.0,
+          "objective": -1.04,
+          "eligible": false,
+          "sizes": [
+            780,
+            54,
+            1022,
+            1,
+            12,
+            1,
+            1,
+            4,
+            1,
+            2
+          ]
+        }
+      ],
+      "der_auto": {
+        "total_frames": 125945,
+        "missed": 1183,
+        "false_alarm": 4047,
+        "confusion": 5983,
+        "miss_rate": 0.0094,
+        "false_alarm_rate": 0.0321,
+        "confusion_rate": 0.0475,
+        "der": 0.089,
+        "n_ref_speakers": 2,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "auto_1": "N_SPK8025",
+          "auto_0": "N_SPK8026"
+        },
+        "missed_overlap": 370,
+        "missed_overlap_rate": 0.0029,
+        "missed_single": 813,
+        "missed_single_rate": 0.0065,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 4047,
+        "false_alarm_single_rate": 0.0321,
+        "confusion_overlap": 3410,
+        "confusion_overlap_rate": 0.0271,
+        "confusion_single": 2573,
+        "confusion_single_rate": 0.0204
+      },
+      "der_true_k": {
+        "total_frames": 125945,
+        "missed": 1183,
+        "false_alarm": 4047,
+        "confusion": 5983,
+        "miss_rate": 0.0094,
+        "false_alarm_rate": 0.0321,
+        "confusion_rate": 0.0475,
+        "der": 0.089,
+        "n_ref_speakers": 2,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "truek_1": "N_SPK8025",
+          "truek_0": "N_SPK8026"
+        },
+        "missed_overlap": 370,
+        "missed_overlap_rate": 0.0029,
+        "missed_single": 813,
+        "missed_single_rate": 0.0065,
+        "false_alarm_overlap": 0,
+        "false_alarm_overlap_rate": 0.0,
+        "false_alarm_single": 4047,
+        "false_alarm_single_rate": 0.0321,
+        "confusion_overlap": 3410,
+        "confusion_overlap_rate": 0.0271,
+        "confusion_single": 2573,
+        "confusion_single_rate": 0.0204
+      },
+      "der_reference": {
+        "total_frames": 125945,
+        "missed": 0,
+        "false_alarm": 0,
+        "confusion": 0,
+        "miss_rate": 0.0,
+        "false_alarm_rate": 0.0,
+        "confusion_rate": 0.0,
+        "der": 0.0,
+        "n_ref_speakers": 2,
+        "n_pred_speakers": 2,
+        "mapping": {
+          "ref_N_SPK8026": "N_SPK8026",
+          "ref_N_SPK8025": "N_SPK8025"
+        }
+      }
+    }
+  ]
+}

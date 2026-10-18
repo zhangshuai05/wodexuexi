@@ -1,0 +1,19 @@
+# 复现本项目 DER 数字所需的最小依赖。
+# 版本为本机实测（2026-09-24，Python 3.12）。
+# 注意：说话人嵌入/VAD 走 FunASR（modelscope），模型权重不入库，见 README。
+
+# ── 核心：跑 streaming_asr/ 下的泳道与 scripts/evaluation/ 下的探针 ──
+numpy==1.26.4
+scipy==1.17.1
+soundfile==0.12.1
+funasr==1.3.14
+torch==2.11.0          # 官方索引为 +cu128；CPU 版亦可
+modelscope==1.38.1
+
+# ── 仅 VBx / PLDA 后端对照需要（spike 路径，主链路不需要）──
+onnxruntime==1.28.0
+h5py
+numexpr
+
+# ── 仅读 AISHELL-4 的 TextGrid 原文需要（本项目用 rttm，默认不需要）──
+textgrid

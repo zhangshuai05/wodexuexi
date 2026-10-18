@@ -1,0 +1,31 @@
+{
+  "config": {
+    "note": "同一批 0.6s 细化窗上，两组质心的判定准确率；匈牙利映射后统计；judge_gap=0.08"
+  },
+  "rows": [
+    {
+      "meeting": "R8008_M8013",
+      "n_refine_windows": 4480,
+      "n_labelled": 3682,
+      "n_speakers": 3,
+      "k_prod_ahc": 3,
+      "k_new_spectral": 3,
+      "acc_prod_centroids": 0.9505703422053232,
+      "acc_new_centroids": 0.9505703422053232,
+      "gap": 0.0,
+      "elapsed_s": 133.4
+    },
+    {
+      "meeting": "R8007_M8011",
+      "n_refine_windows": 12294,
+      "n_labelled": 7854,
+      "n_speakers": 4,
+      "k_prod_ahc": 2,
+      "k_new_spectral": 4,
+      "acc_prod_centroids": 0.7091927680162974,
+      "acc_new_centroids": 0.9833206009676598,
+      "gap": -0.27412783295136245,
+      "elapsed_s": 254.6
+    }
+  ]
+}

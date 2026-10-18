@@ -1,0 +1,55 @@
+# ===== 模型权重与本地模型快照（体积大、可从远端重取）=====
+models/
+models.json
+iic--*/
+speech_campplus_sv_zh-cn_16k-common/
+speech_fsmn_vad*/
+speech_paraformer*/
+checkpoints/
+cv_ss_test/
+
+# ===== 音频与推理产物 =====
+Audio/
+*.wav
+*.mp3
+*.flac
+*.m4a
+diar_out/
+diar_result/
+output/
+streaming_asr/output/
+web/clips/
+
+# ===== 二进制/权重/缓存 =====
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.npy
+*.npz
+*.ark
+*.seg
+
+# ===== 嵌套仓库（各自有 remote，不要当 gitlink 提交）=====
+.audit_diarization_cl_8cb8/
+milestones/c1_v4_20260908/
+
+# ===== Python / 编辑器 / 工具状态 =====
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest*
+.vscode/
+.claude/
+.translations/
+
+# ===== 临时与本地产物 =====
+artifacts/_tmp/
+*.log
+
+# ===== 工具状态与参考资料（不入库）=====
+.opencodereview/
+AliMeeting/*.html
+artifacts/_*.txt
+AliMeeting/results/_*.json

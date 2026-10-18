@@ -1,0 +1,34 @@
+{
+  "config": {
+    "osd_th": 0.3,
+    "min_run_s": 0.6,
+    "win_s": 2.0,
+    "hop_s": 1.0,
+    "note": "grid=固定网格窗（现状做法）；osdwin=OSD 单人区间内取窗"
+  },
+  "rows": [
+    {
+      "meeting": "R8007_M8010",
+      "n_turns": 1181,
+      "single_runs": 357,
+      "single_speech_s": 787.4,
+      "osd_windows": 525,
+      "grid_windows": 1851,
+      "grid": {
+        "acc": 0.2218458933107536,
+        "k": 1,
+        "n": 1181,
+        "cover": 1.0,
+        "n_windows": 1851
+      },
+      "osdwin": {
+        "acc": 0.2218458933107536,
+        "k": 1,
+        "n": 1181,
+        "cover": 0.4961896697713802,
+        "n_windows": 525
+      },
+      "elapsed_s": 74.6
+    }
+  ]
+}

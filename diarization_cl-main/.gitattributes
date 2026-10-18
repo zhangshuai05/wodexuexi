@@ -1,0 +1,24 @@
+# The archive manifest hashes LF-terminated source files.
+* text eol=lf
+
+# ⚠️ 上面那行会把**二进制**当文本，git 落盘时按 CRLF→LF 清洗，直接破坏内容。
+# 实测（2026-10-08）：png 705922 -> 705897 字节，正好少掉 25 个 \r\n。
+# 所以二进制必须显式标 -text，否则 `git add` 一次就写坏。
+*.png   -text
+*.jpg   -text
+*.jpeg  -text
+*.gif   -text
+*.wmf   -text
+*.pdf   -text
+*.xlsx  -text
+*.docx  -text
+*.pptx  -text
+*.npz   -text
+*.npy   -text
+*.pt    -text
+*.pth   -text
+*.bin   -text
+*.zip   -text
+*.flac  -text
+*.wav   -text
+*.mp3   -text

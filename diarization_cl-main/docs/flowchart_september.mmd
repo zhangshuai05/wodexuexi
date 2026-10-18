@@ -1,0 +1,18 @@
+flowchart TD
+    START[九月目标<br/>第一个可信 DER] --> PH1[阶段1 设备布放实测<br/>第1周 1家店 桌面vs佩戴]
+    PH1 --> CHK1{桌面可行?<br/>拾音清晰/设备安全<br/>不被取走/跌落}
+    CHK1 -- 否 --> STOP1[放弃桌面方案<br/>成立物理极限报告]
+    CHK1 -- 是 --> ALIGN[顺带统一命名<br/>东八区时间戳对齐<br/>Call=顾客麦克/116 Note=员工麦克/118]
+    ALIGN --> PH2[阶段2 分离算法优化<br/>第2-3周 过分割案例<br/>引入时间连续性约束]
+    PH2 --> PH3[阶段3 DER基线评测<br/>第3-4周 接入eval/diarization.py<br/>CAM++嵌入模型已就绪]
+    PH3 --> PROD[九月交付物<br/>一个DER数字+场景适用性说明]
+    PROD --> EXCL[明确排除<br/>多店铺铺开/全面解决/回流自动化]
+    PAR["并行 交付收尾<br/>前两周清零"] --> PH1
+    RF["并行 定向数据回流<br/>≤50条/周 不建全栈"] --> PH2
+    POST["数据后处理<br/>不单独立项 结论送训练"] --> PH3
+    classDef main fill:#E8F0FE,stroke:#1F4E79,color:#1F4E79;
+    classDef para fill:#FFF4E5,stroke:#E08A00,color:#8A5200;
+    classDef excl fill:#FDECEA,stroke:#C00000,color:#A00000;
+    class START,PH1,CHK1,STOP1,ALIGN,PH2,PH3,PROD main;
+    class PAR,RF,POST para;
+    class EXCL excl;

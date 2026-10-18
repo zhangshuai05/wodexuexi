@@ -1,0 +1,22 @@
+{
+ "README.md": "44db5ab79498587a723c86e48129e7d27e36dfc6dc291069fc639af48ca87f43",
+ "a2_v2.py": "f80f86ac01bcc8caf8967271b9f3e14b7170c19c724e33ba3d8f5f4365579d1e",
+ "claude_a2.py": "75e47c73f6f5ddc6e4ee00229c08fccb4ccdbcae77d2649425e8e18214580d22",
+ "claude_a2_asr_contract.py": "914b055e73e2e05412012ae437594ea05b6d8b29170c15211872adae5f5bd888",
+ "claude_a2_v8.py": "cd6128afb887ea1611733c371744d40d4c1d6fd5cbf1d6abb8de0c2ec97711e7",
+ "compare_c1.py": "f5f3c6cb2a3c7c69f223a4ca54c5079ceb3fd95935098a8a07d340b91a98410a",
+ "denoise_frcrn.py": "218cc908d76e5133e33b022089cd78e7a467ba74847228459af080492afdf1aa",
+ "env_detect.py": "6290d584883f55d289a9197bd5bf5d99d283c281309770ab80d8d0f4fc420584",
+ "local_eval.py": "cdb1733315730fab4022b06176f2905df8e083552fcc63d242c8277dc9718f5d",
+ "models.example.json": "f5961f0f5e319f4d955df5449978e179ef788b0d9bb5bea91d4a40335f879b68",
+ "request.txt": "e46e056429fd0c7097cac4add80276e98abbc1829f7dc69ad5452a518ebb8c08",
+ "run.py": "431caf95dea815cab9477e8b62626c39c1099a97f954a43cdbe49697aa3b8f3f",
+ "verify.py": "1538011c4f5af4d0427d399fecb173efc72dc77c5f2ff31c9bcec9239934dce0",
+ "evidence/DeepSeek_定性评价_20260914.md": "edfdc2318e6cc29721da7ec06d919bcd0da36ce5957da96df4b4ff18ced0f500",
+ "evidence/v7_三项致命缺陷评审_20260914.md": "c2bf814cc8e51bbd700989e7b5ab1c717f1d6ba2caf1e8b37c2f93143eb3912f",
+ "evidence/v8_三项致命缺陷修复.md": "9dade0bc3e1287c2bdfab25c9bbb284cb6e4113c0c164767d7c418d068a6df21",
+ "vendor_pkgs/addict.py": "bc5cd60c18f5238aabb56760e4c5afa082d68c1f702279b32fd719f55be4bca5",
+ "vendor_pkgs/addict/__init__.py": "c6694d898615a000f7fc57e681f38cd9c737c08d7b19282c3013836c546cfe66",
+ "vendor_pkgs/addict/addict.py": "49c39f72568033bba0c99a17396d871cbf60097b7f5cf7be8b96d32e263cb9f5",
+ "test_c1_v9.py": "3466dd6afd95c18b382f83cc93e2c684c666c7ba80c41d05fac8541a967f7922"
+}
