@@ -253,3 +253,35 @@ def test_main_dump_draft_does_not_require_reference(tmp_path):
 
     assert main([str(d), "--dump-draft", str(out)]) == 0
     assert out.exists()
+
+
+def test_textgrid_path_still_works(tmp_path):
+    d = _session(tmp_path, [
+        {"turn_id": "turn_0001", "text": "你好世界", "start_ms": 0,
+         "end_ms": 2000, "spk_label": "speaker_1"},
+    ])
+    tg = tmp_path / "a.TextGrid"
+    tg.write_text(
+        'File type = "ooTextFile"\n'
+        'Object class = "TextGrid"\n'
+        'xmin = 0\n'
+        'xmax = 2\n'
+        'tiers? <exists>\n'
+        'size = 1\n'
+        'item [1]:\n'
+        '    class = "IntervalTier"\n'
+        '    name = "speaker_1"\n'
+        '    xmin = 0\n'
+        '    xmax = 2\n'
+        '    intervals: size = 1\n'
+        '    intervals [1]:\n'
+        '        xmin = 0\n'
+        '        xmax = 2\n'
+        '        text = "你好世界"\n',
+        encoding="utf-8",
+    )
+
+    result = evaluate(d, tg)
+
+    assert result["reference"]["source"] == "textgrid"
+    assert result["versions"]["turns"]["cer"] == 0.0
