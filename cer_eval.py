@@ -351,7 +351,7 @@ def read_ref_text(path) -> List[RefInterval]:
     不带时间戳的行：整行都是文本，timed=False（只能全片评测）。
     """
     out: List[RefInterval] = []
-    for raw in Path(path).read_text(encoding="utf-8").splitlines():
+    for raw in Path(path).read_text(encoding="utf-8-sig").splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
@@ -567,46 +567,93 @@ class VersionMetrics:
         return payload
 
 
-def _text_versions(obj: Dict) -> Dict[str, str]:
-    utterances = obj.get("utterances") or []
+def _midpoint(start_ms: int, end_ms: int) -> int:
+    return (int(start_ms) + int(end_ms)) // 2
+
+
+def _in_window(start_ms: int, end_ms: int,
+               window: Optional[Tuple[int, int]]) -> bool:
+    if window is None:
+        return True
+    mid = _midpoint(start_ms, end_ms)
+    return window[0] <= mid <= window[1]
+
+
+def _text_versions(obj: Dict, *,
+                   window: Optional[Tuple[int, int]] = None) -> Dict[str, str]:
+    utterances = [
+        u for u in (obj.get("utterances") or [])
+        if _in_window(int(u.get("start_ms") or 0),
+                      int(u.get("end_ms") or 0), window)
+    ]
     raw = "".join(normalize(u.get("raw_text") or "") for u in utterances)
     polished = "".join(
         normalize(u.get("polished_text") or u.get("raw_text") or "")
         for u in utterances
     )
-    # strict：只统计真正有 final_text 的句子（缺失的算空），用于诊断离线二遍覆盖率
     final_strict = "".join(normalize(u.get("final_text") or "") for u in utterances)
-    # display：与 session.json.turns 完全一致（final -> polished -> raw 逐句回退）
-    turns = "".join(normalize(t.get("text") or "") for t in obj.get("turns") or [])
+    turns = [
+        t for t in (obj.get("turns") or [])
+        if _in_window(int(t.get("start_ms") or 0),
+                      int(t.get("end_ms") or 0), window)
+    ]
+    turns_text = "".join(normalize(t.get("text") or "") for t in turns)
     return {
         "raw": raw,
         "polished": polished,
         "final": final_strict,
-        "turns": turns,
+        "turns": turns_text,
     }
 
 
 def evaluate(
     session_dir,
-    textgrid_path,
+    textgrid_path=None,
     *,
+    ref_txt=None,
+    window: Optional[Tuple[int, int]] = None,
     skip_start_ms: int = 0,
     legacy: bool = False,
     pad_ms: int = 80,
 ) -> Dict:
+    if (textgrid_path is None) == (ref_txt is None):
+        raise ValueError("需要且只能提供 TextGrid 或 --ref-txt")
     session_dir = Path(session_dir)
     obj = json.loads((session_dir / "session.json").read_text(encoding="utf-8"))
-    ref_intervals = reference_intervals(
-        textgrid_path, skip_start_ms=skip_start_ms)
+
+    if ref_txt is not None:
+        ref_intervals = read_ref_text(ref_txt)
+        if window is not None and not all(item.timed for item in ref_intervals):
+            raise ValueError("--window 要求参考行全部带时间戳")
+        source = "txt"
+    else:
+        ref_intervals = reference_intervals(
+            textgrid_path, skip_start_ms=skip_start_ms)
+        source = "textgrid"
+    if window is not None:
+        ref_intervals = [
+            item for item in ref_intervals
+            if _in_window(item.start_ms, item.end_ms, window)
+        ]
     ref = "".join(item.text for item in ref_intervals)
 
-    utterances = obj.get("utterances") or []
+    utterances_all = obj.get("utterances") or []
+    kept_utts = [
+        u for u in utterances_all
+        if _in_window(int(u.get("start_ms") or 0),
+                      int(u.get("end_ms") or 0), window)
+    ]
+    kept_turns = [
+        t for t in (obj.get("turns") or [])
+        if _in_window(int(t.get("start_ms") or 0),
+                      int(t.get("end_ms") or 0), window)
+    ]
     utt_intervals = [
         (int(u.get("start_ms") or 0), int(u.get("end_ms") or 0))
-        for u in utterances
+        for u in kept_utts
     ]
 
-    texts = _text_versions(obj)
+    texts = _text_versions(obj, window=window)
     versions: Dict[str, VersionMetrics] = {}
     for name, hyp in texts.items():
         versions[name] = VersionMetrics(
@@ -616,12 +663,19 @@ def evaluate(
             legacy_cer=legacy_lcs_cer(ref, hyp) if legacy else None,
         )
 
-    attribution = attribute_edits(
-        ref_intervals, texts["turns"], utt_intervals, pad_ms=pad_ms)
-
-    raw_cover = coverage(ref_intervals, utt_intervals, pad_ms=0)
-    padded_cover = coverage(ref_intervals, utt_intervals, pad_ms=pad_ms)
-    overlap_chars, overlap_intervals = cross_speaker_overlap(ref_intervals)
+    primary_version = "final" if window is not None else "turns"
+    timed_ref = bool(ref_intervals) and all(item.timed for item in ref_intervals)
+    if timed_ref:
+        attribution = attribute_edits(
+            ref_intervals, texts[primary_version], utt_intervals, pad_ms=pad_ms)
+        raw_cover = coverage(ref_intervals, utt_intervals, pad_ms=0)
+        padded_cover = coverage(ref_intervals, utt_intervals, pad_ms=pad_ms)
+        overlap_chars, overlap_intervals = cross_speaker_overlap(ref_intervals)
+    else:
+        attribution = {}
+        raw_cover = Coverage(len(ref), 0, 0.0, 0, 0.0)
+        padded_cover = raw_cover
+        overlap_chars = overlap_intervals = 0
 
     tier_stats: Dict[str, Dict] = {}
     for item in ref_intervals:
@@ -645,11 +699,16 @@ def evaluate(
             "chars": len(ref),
             "intervals": len(ref_intervals),
             "ms": raw_cover.ref_ms,
-            # 口癖/语气词单独计量：ASR 普遍不转写这些，会被算成 Del
             "filler_chars": sum(1 for ch in ref if ch in "呃嗯额哦"),
+            "source": source,
+            "timed": timed_ref,
+            "textgrid": str(textgrid_path) if textgrid_path else None,
+            "ref_txt": str(ref_txt) if ref_txt else None,
+            "window": list(window) if window else None,
         },
-        "utterances": len(utterances),
-        "turns": len(obj.get("turns") or []),
+        "utterances": len(kept_utts),
+        "turns": len(kept_turns),
+        "primary_version": primary_version,
         "versions": {name: metrics.to_dict() for name, metrics in versions.items()},
         "attribution": attribution,
         "coverage": {
@@ -680,6 +739,13 @@ def _print_report(result: Dict) -> None:
     print(f"session={result['session']}  ref={ref['chars']}  "
           f"ref_intervals={ref['intervals']}  utts={result['utterances']}  "
           f"turns={result['turns']}")
+    if ref.get("source") == "txt":
+        print(f"  ref_txt={ref['ref_txt']}")
+    if ref.get("window"):
+        start, end = ref["window"]
+        print(f"  window={format_time_ms(start)}-{format_time_ms(end)}")
+    if result.get("primary_version"):
+        print(f"  主口径={result['primary_version']}")
     if result["skip_start_ms"]:
         print(f"  （已跳过前 {result['skip_start_ms'] / 1000:.1f}s）")
     if ref.get("filler_chars"):
@@ -697,36 +763,39 @@ def _print_report(result: Dict) -> None:
             print(f"  {'':9s} legacy difflib/LCS CER={item['legacy_lcs_cer']:.2%}"
                   f"（仅历史对照，不得与新口径混用）")
 
-    attribution = result.get("attribution") or {}
-    if attribution:
-        print("  错误归因（turns 口径，按参考区间精确归因）：")
-        for dimension, title in (
-            ("coverage", "VAD 覆盖"),
-            ("overlap", "跨说话人"),
-            ("tier", "说话人"),
-        ):
-            for key, item in attribution.get(dimension, {}).items():
-                print(f"    [{title}] {key:12s} ref={item['ref_chars']:5d} "
-                      f"S={item['sub']:5d} D={item['del']:5d} I={item['ins']:5d} "
-                      f"CER={item['cer']:7.2%} "
-                      f"(Sub {item['sub_rate']:.2%} / Del {item['del_rate']:.2%} / "
-                      f"Ins {item['ins_rate']:.2%})")
+    if not ref.get("timed", True):
+        print("  （参考无时间戳：跳过覆盖率与归因）")
+    else:
+        attribution = result.get("attribution") or {}
+        if attribution:
+            print("  错误归因（turns 口径，按参考区间精确归因）：")
+            for dimension, title in (
+                ("coverage", "VAD 覆盖"),
+                ("overlap", "跨说话人"),
+                ("tier", "说话人"),
+            ):
+                for key, item in attribution.get(dimension, {}).items():
+                    print(f"    [{title}] {key:12s} ref={item['ref_chars']:5d} "
+                          f"S={item['sub']:5d} D={item['del']:5d} I={item['ins']:5d} "
+                          f"CER={item['cer']:7.2%} "
+                          f"(Sub {item['sub_rate']:.2%} / Del {item['del_rate']:.2%} / "
+                          f"Ins {item['ins_rate']:.2%})")
 
-    cov = result["coverage"]
-    print("  覆盖/重叠：")
-    print(f"    VAD 原始未覆盖参考字符: {cov['vad_uncovered_chars']:.0f}"
-          f" / {ref['chars']} ({cov['vad_uncovered_ratio']:.2%})，"
-          f"时长 {cov['vad_uncovered_ms'] / 1000:.1f}s")
-    print(f"    加 80ms pad 后未覆盖:   {cov['padded_uncovered_chars']:.0f}"
-          f" ({cov['padded_uncovered_ratio']:.2%})，"
-          f"时长 {cov['padded_uncovered_ms'] / 1000:.1f}s")
-    print(f"    跨说话人重叠参考字符:   {cov['cross_speaker_overlap_chars']}"
-          f" ({cov['cross_speaker_overlap_ratio']:.2%})，"
-          f"{cov['cross_speaker_overlap_intervals']} 个区间")
-    print("  分说话人：")
-    for tier, stat in sorted(result["tiers"].items()):
-        print(f"    {tier}: chars={stat['chars']} intervals={stat['intervals']} "
-              f"overlap_chars={stat['overlap_chars']}")
+        cov = result["coverage"]
+        print("  覆盖/重叠：")
+        print(f"    VAD 原始未覆盖参考字符: {cov['vad_uncovered_chars']:.0f}"
+              f" / {ref['chars']} ({cov['vad_uncovered_ratio']:.2%})，"
+              f"时长 {cov['vad_uncovered_ms'] / 1000:.1f}s")
+        print(f"    加 80ms pad 后未覆盖:   {cov['padded_uncovered_chars']:.0f}"
+              f" ({cov['padded_uncovered_ratio']:.2%})，"
+              f"时长 {cov['padded_uncovered_ms'] / 1000:.1f}s")
+        print(f"    跨说话人重叠参考字符:   {cov['cross_speaker_overlap_chars']}"
+              f" ({cov['cross_speaker_overlap_ratio']:.2%})，"
+              f"{cov['cross_speaker_overlap_intervals']} 个区间")
+        print("  分说话人：")
+        for tier, stat in sorted(result["tiers"].items()):
+            print(f"    {tier}: chars={stat['chars']} intervals={stat['intervals']} "
+                  f"overlap_chars={stat['overlap_chars']}")
 
 
 def main(argv: Optional[List[str]] = None) -> int:

@@ -58,3 +58,111 @@ def test_read_ref_text_plain_lines_are_untimed(tmp_path):
 
     assert [i.text for i in items] == ["你好世界", "再见"]
     assert all(i.timed is False for i in items)
+
+
+from cer_eval import evaluate  # noqa: E402
+
+
+def test_read_ref_text_accepts_utf8_bom(tmp_path):
+    path = tmp_path / "ref.txt"
+    path.write_text(
+        "[00:00.0-00:01.0] speaker_1: 你好\n", encoding="utf-8-sig")
+
+    items = read_ref_text(path)
+
+    assert items[0].start_ms == 0
+    assert items[0].text == "你好"
+
+
+def _session(tmp_path, turns, utterances=None):
+    d = tmp_path / "s"
+    d.mkdir()
+    (d / "session.json").write_text(json.dumps({
+        "session_id": "s",
+        "status": "transcript",
+        "duration_ms": 20000,
+        "utterances": utterances or [],
+        "turns": turns,
+    }, ensure_ascii=False), encoding="utf-8")
+    return d
+
+
+def test_evaluate_ref_txt_full_and_window(tmp_path):
+    d = _session(tmp_path, [
+        {"turn_id": "turn_0001", "text": "你好世界", "start_ms": 0,
+         "end_ms": 2000, "spk_label": "speaker_1"},
+        {"turn_id": "turn_0002", "text": "第二段内容", "start_ms": 10000,
+         "end_ms": 12000, "spk_label": "speaker_2"},
+    ])
+    ref = tmp_path / "ref.txt"
+    ref.write_text(
+        "[00:00.0-00:02.0] speaker_1: 你好世界\n"
+        "[00:10.0-00:12.0] speaker_2: 第二段内容\n",
+        encoding="utf-8",
+    )
+
+    full = evaluate(d, ref_txt=ref)
+    windowed = evaluate(d, ref_txt=ref, window=(9000, 13000))
+
+    assert full["reference"]["chars"] == len("你好世界第二段内容")
+    assert full["versions"]["turns"]["cer"] == 0.0
+    assert windowed["reference"]["chars"] == len("第二段内容")
+    assert windowed["versions"]["turns"]["cer"] == 0.0
+    assert windowed["turns"] == 1
+
+
+def test_window_uses_utterances_when_turn_spans_window(tmp_path):
+    d = _session(
+        tmp_path,
+        turns=[{"turn_id": "turn_0001", "text": "第一段第二段",
+                "start_ms": 0, "end_ms": 20000,
+                "spk_label": "speaker_1"}],
+        utterances=[
+            {"utt_id": "u1", "start_ms": 12000, "end_ms": 14000,
+             "final_text": "第二段", "raw_text": "第二段"},
+            {"utt_id": "u2", "start_ms": 16000, "end_ms": 18000,
+             "final_text": "内容", "raw_text": "内容"},
+        ],
+    )
+    ref = tmp_path / "ref.txt"
+    ref.write_text(
+        "[00:12.0-00:14.0] speaker_1: 第二段\n"
+        "[00:16.0-00:18.0] speaker_1: 内容\n",
+        encoding="utf-8",
+    )
+
+    result = evaluate(d, ref_txt=ref, window=(11000, 19000))
+
+    assert result["turns"] == 0
+    assert result["primary_version"] == "final"
+    assert result["versions"]["final"]["cer"] == 0.0
+
+
+def test_evaluate_ref_txt_counts_substitution(tmp_path):
+    d = _session(tmp_path, [
+        {"turn_id": "turn_0001", "text": "你好世男", "start_ms": 0,
+         "end_ms": 2000, "spk_label": "speaker_1"},
+    ])
+    ref = tmp_path / "ref.txt"
+    ref.write_text("[00:00.0-00:02.0] speaker_1: 你好世界\n", encoding="utf-8")
+
+    item = evaluate(d, ref_txt=ref)["versions"]["turns"]
+
+    assert (item["sub"], item["del"], item["ins"]) == (1, 0, 0)
+    assert item["cer"] == 0.25
+
+
+def test_window_requires_timestamps(tmp_path):
+    d = _session(tmp_path, [
+        {"turn_id": "turn_0001", "text": "你好", "start_ms": 0,
+         "end_ms": 2000, "spk_label": "speaker_1"},
+    ])
+    ref = tmp_path / "ref.txt"
+    ref.write_text("你好\n", encoding="utf-8")
+
+    try:
+        evaluate(d, ref_txt=ref, window=(0, 5000))
+    except ValueError as exc:
+        assert "时间戳" in str(exc)
+    else:
+        raise AssertionError("window + untimed ref must raise")
