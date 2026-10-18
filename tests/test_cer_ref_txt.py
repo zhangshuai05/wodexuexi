@@ -203,3 +203,53 @@ def test_window_requires_timestamps(tmp_path):
         assert "时间戳" in str(exc)
     else:
         raise AssertionError("window + untimed ref must raise")
+
+
+from cer_eval import dump_draft, main  # noqa: E402
+
+
+def test_dump_draft_writes_windowed_lines(tmp_path):
+    d = _session(tmp_path, [
+        {"turn_id": "turn_0001", "text": "第一段", "start_ms": 0,
+         "end_ms": 2000, "spk_label": "speaker_1"},
+        {"turn_id": "turn_0002", "text": "第二段", "start_ms": 10000,
+         "end_ms": 12000, "spk_label": "speaker_2"},
+    ])
+    out = tmp_path / "draft.txt"
+
+    count = dump_draft(d, out, window=(9000, 13000))
+
+    assert count == 1
+    assert out.read_text(encoding="utf-8") == (
+        "[00:10.0-00:12.0] speaker_2: 第二段\n")
+
+
+def test_dump_draft_prefers_utterances_and_strips_cjk_spaces(tmp_path):
+    d = _session(
+        tmp_path,
+        turns=[{"turn_id": "turn_0001", "text": "整段", "start_ms": 0,
+                "end_ms": 20000, "spk_label": "speaker_1"}],
+        utterances=[
+            {"utt_id": "u1", "start_ms": 10000, "end_ms": 12000,
+             "final_text": "第 二 段", "raw_text": "第二段",
+             "spk_label": "speaker_2"},
+        ],
+    )
+    out = tmp_path / "draft.txt"
+
+    count = dump_draft(d, out, window=(9000, 13000))
+
+    assert count == 1
+    assert out.read_text(encoding="utf-8") == (
+        "[00:10.0-00:12.0] speaker_2: 第二段\n")
+
+
+def test_main_dump_draft_does_not_require_reference(tmp_path):
+    d = _session(tmp_path, [
+        {"turn_id": "turn_0001", "text": "你好", "start_ms": 0,
+         "end_ms": 2000, "spk_label": "speaker_1"},
+    ])
+    out = tmp_path / "draft.txt"
+
+    assert main([str(d), "--dump-draft", str(out)]) == 0
+    assert out.exists()

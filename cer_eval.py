@@ -812,12 +812,61 @@ def _print_report(result: Dict) -> None:
                   f"overlap_chars={stat['overlap_chars']}")
 
 
+_CJK_SPACE_RE = re.compile(r"(?<=[一-鿿])\s+(?=[一-鿿])")
+
+
+def _readable(text: str) -> str:
+    """去掉汉字之间的空格（SEACO 输出为空格分隔 token）。"""
+    return _CJK_SPACE_RE.sub("", text or "")
+
+
+def dump_draft(session_dir, output_path, *,
+               window: Optional[Tuple[int, int]] = None) -> int:
+    """从 session.json 导出可人工修正的草稿；返回行数。
+
+    优先 utterances（逐句），没有 utterances 时才回退 turns。
+    """
+    obj = json.loads(
+        (Path(session_dir) / "session.json").read_text(encoding="utf-8"))
+    utterances = obj.get("utterances") or []
+    turns = obj.get("turns") or []
+    use_utterances = bool(utterances)
+    items = utterances if use_utterances else turns
+
+    lines: List[str] = []
+    for item in items:
+        start_ms = int(item.get("start_ms") or 0)
+        end_ms = int(item.get("end_ms") or 0)
+        if not _in_window(start_ms, end_ms, window):
+            continue
+        if use_utterances:
+            text = (item.get("final_text") or item.get("polished_text")
+                    or item.get("raw_text") or "")
+        else:
+            text = item.get("text") or ""
+        text = _readable(text)
+        speaker = item.get("spk_label") or "speaker_?"
+        lines.append(
+            f"[{format_time_ms(start_ms)}-{format_time_ms(end_ms)}] "
+            f"{speaker}: {text}")
+    Path(output_path).write_text(
+        "\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    return len(lines)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="CER（Levenshtein + Sub/Del/Ins）")
+    parser = argparse.ArgumentParser(
+        description="CER（Levenshtein + Sub/Del/Ins，支持 TextGrid 或 --ref-txt）")
     parser.add_argument("session_dir")
-    parser.add_argument("textgrid")
+    parser.add_argument("textgrid", nargs="?")
+    parser.add_argument("--ref-txt", default=None,
+                        help="纯文本参考；与 TextGrid 二选一")
+    parser.add_argument("--window", default=None,
+                        help="只评该时间窗，如 60000-180000 或 01:00.0-03:00.0")
+    parser.add_argument("--dump-draft", default=None,
+                        help="从 session.json 导出草稿后退出（不需要参考输入）")
     parser.add_argument("--skip-start-ms", type=int, default=0,
-                        help="跳过开头 N 毫秒（如 23000 排除报号段）")
+                        help="跳过开头 N 毫秒（TextGrid 路径）")
     parser.add_argument("--legacy", action="store_true",
                         help="额外打印旧 difflib/LCS 口径，仅作历史对照")
     parser.add_argument("--pad-ms", type=int, default=80,
@@ -825,10 +874,26 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--json", action="store_true", help="输出机器可读 JSON")
     args = parser.parse_args(argv)
 
+    window = parse_window(args.window) if args.window else None
+
+    if args.dump_draft:
+        count = dump_draft(args.session_dir, args.dump_draft, window=window)
+        print(f"draft_lines={count} path={args.dump_draft}")
+        return 0
+
+    if args.textgrid and args.ref_txt:
+        parser.error("TextGrid 与 --ref-txt 只能二选一")
+    if not args.textgrid and not args.ref_txt:
+        parser.error("需要 TextGrid 或 --ref-txt")
+
+    # skip_start_ms 只适用于 TextGrid；ref-txt 路径置 0，避免 --json 误导
+    skip_start_ms = args.skip_start_ms if args.textgrid else 0
     result = evaluate(
         args.session_dir,
         args.textgrid,
-        skip_start_ms=args.skip_start_ms,
+        ref_txt=args.ref_txt,
+        window=window,
+        skip_start_ms=skip_start_ms,
         legacy=args.legacy,
         pad_ms=args.pad_ms,
     )
