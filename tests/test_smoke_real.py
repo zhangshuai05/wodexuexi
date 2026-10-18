@@ -18,7 +18,7 @@ def test_real_smoke_transcript_only(tmp_path):
     """只看转写链路；--no-diar 让这个测试在 1 分钟内可完成。"""
     obj = run_offline.run(
         SMOKE, tmp_path / "s_smoke",
-        chunk_ms=600, fast=True, no_llm=True, no_diar=True,
+        chunk_ms=600, fast=True, no_llm=True, no_diar=True, no_final_asr=True,
         max_seconds=30.0,
     )
     assert obj["status"] == "transcript"
@@ -34,7 +34,7 @@ def test_real_smoke_full(tmp_path):
     """完整链路含回填。耗时约 1-5 分钟。"""
     obj = run_offline.run(
         SMOKE, tmp_path / "s_full",
-        chunk_ms=600, fast=True, no_llm=True,
+        chunk_ms=600, fast=True, no_llm=True, no_final_asr=True,
     )
     assert obj["status"] == "diarized"
     assert obj["utterances"], "完整链路必须产出至少一句，否则回填断言是真空通过"

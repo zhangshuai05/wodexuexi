@@ -49,7 +49,12 @@ C:\Users\31817\miniconda3\envs\funasr\python.exe run_offline.py `
     --fast --no-llm
 ```
 
-去掉 `--no-llm` 即启用 DeepSeek 润色（需要 `DEEPSEEK_API_KEY`）。
+去掉 `--no-llm` 即启用 DeepSeek 润色（需要 `DEEPSEEK_API_KEY`）：转写中逐句粗修，
+会议结束后再按 speaker turn 做一次带完整上下文的精修（94 turn 实测约 86 秒）。
+
+**最终稿默认来自会后离线二遍 ASR**（本地 SEACO Paraformer，按 VAD 句子重转写）；
+直播流式稿只作为草稿保留。39 分钟录音实测离线二遍约 2.5 分钟。`--no-final-asr` 可关闭。
+多声道输入只取 **ch0**，不再用 `-ac 1` 下混。
 
 ### 参数
 
@@ -63,6 +68,8 @@ C:\Users\31817\miniconda3\envs\funasr\python.exe run_offline.py `
 | `--fast` | 关 | 全速推流，不按墙钟节流 |
 | `--no-llm` | 关 | 跳过 DeepSeek 润色（不生成 `polished.json`） |
 | `--no-diar` | 关 | 跳过会后说话人回填（`status` 停留 `transcript`，不生成 `diarization.json`） |
+| `--no-final-polish` | 关 | 跳过会后按 speaker turn 的二次精修（不生成 `turns_polished.json`） |
+| `--no-final-asr` | 关 | 跳过会后离线二遍 ASR（不生成 `final_text.json`，最终稿回退直播文本） |
 
 成功时打印 JSON 摘要（实际输出示例）：
 
@@ -98,6 +105,28 @@ C:\Users\31817\miniconda3\envs\funasr\python.exe run_offline.py `
 | `diarization.json` | 回填完成；`--no-diar` 时不存在 | 见下 |
 | `session.json` | 每次合并（幂等） | 见下 |
 | `events.ndjson` | 所有流式事件逐行追加 | 见下 |
+| `final_text.json` | 会后离线二遍 ASR 完成；`--no-final-asr` 时不存在 | 见下 |
+| `turns_polished.json` | 会后精修完成；`--no-llm` / `--no-final-polish` 时不存在 | 见下 |
+
+`final_text.json` 的形状与 `turns_polished.json` 相同，键是 `utt_id`：
+
+```json
+{
+  "utt_0001": {"text": "离线二遍转写文本", "start_ms": 0, "end_ms": 1200}
+}
+```
+
+`turns_polished.json` 是可选的第 8 个文件：
+
+```json
+{
+  "turn_0001": {"text": "精修后的整段", "start_ms": 0, "end_ms": 12000}
+}
+```
+
+合并时只有 `start_ms` / `end_ms` 与当前 turn 完全一致才会覆盖 `session.json.turns[].text`；
+独立重跑回填导致 turn 边界变化时，旧精修稿会被忽略并回退直播稿。
+`utterances[].raw_text` 与 `polished.json` 始终原样保留，因此精修效果可以随时 A/B 回溯。
 
 ### `transcript.json`
 
@@ -172,8 +201,12 @@ C:\Users\31817\miniconda3\envs\funasr\python.exe run_offline.py `
 
 - `status`：有 `diarization.json` 时为 `diarized`，否则为 `transcript`；润色不改变 `status`。
 - `polished_text` 缺省回退为 `raw_text`；`corrected` / `bypassed` 缺省为 `false`。
+- `final_text` 是会后离线二遍 ASR 的逐句文本；缺省为 `null`。`turns[].text` 优先用它，
+  其次 `polished_text`，最后 `raw_text`。
 - `spk` / `spk_label` 在未回填时为 `null`。
 - `overlap_spk` 为 v1 预留字段，v0 恒为 `null`。
+- `turns` 是显示/导出粒度：相邻同说话人句在 8 秒静音内合并；有 `turns_polished.json` 时
+  `turns[].text` 用它覆盖，句级字段不变。
 - `start_ms` / `end_ms` **只由累计采样点数**（`samples * 1000 // 16000`）算出，不用墙钟。
 
 ### `events.ndjson`

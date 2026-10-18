@@ -17,6 +17,8 @@
 
   // 模块级唯一的在途请求控制器；重置或再次发起时终止旧请求。
   var controller = null;
+  var resetRequest = null;
+  var finished = false;
 
   // 最终重绘期间页面会调用 onReset；此时不得中止仍在读取的流，
   // 否则服务端随后补发的 finish 行会被丢弃。
@@ -29,24 +31,51 @@
     }
   }
 
-  // 把服务端 turn 层字段适配成页面原有的单句事件形状。
-  function adaptEvent(event) {
-    if (!event) {
-      return event;
+  function waitForServerIdle(deadline) {
+    return fetch("/api/health", { cache: "no-store" }).then(function (response) {
+      if (!response.ok) {
+        throw new Error("读取会议服务状态失败（HTTP " + response.status + "）");
+      }
+      return response.json();
+    }).then(function (state) {
+      if (!state.busy && !state.resetting) {
+        return;
+      }
+      if (Date.now() >= deadline) {
+        throw new Error("上一场会议仍在停止，请稍后重试");
+      }
+      var hint = document.getElementById("transcript-hint");
+      if (hint) {
+        hint.textContent = "正在结束上一次会议任务…";
+      }
+      return new Promise(function (resolve) {
+        window.setTimeout(resolve, 300);
+      }).then(function () {
+        return waitForServerIdle(deadline);
+      });
+    });
+  }
+
+  function requestBackendReset() {
+    if (resetRequest) {
+      return resetRequest;
     }
-    if (event.turn_id) {
-      event.utt_id = event.turn_id;
-    }
-    if (event.t === "asr_partial" && typeof event.turn_text === "string") {
-      event.text = event.turn_text;
-    }
-    if (event.t === "asr_final" && typeof event.turn_text === "string") {
-      event.raw_text = event.turn_text;
-    }
-    if (event.t === "llm_confirmed" && typeof event.turn_polished_text === "string") {
-      event.polished_text = event.turn_polished_text;
-    }
-    return event;
+    resetRequest = fetch("/api/stream_meeting/reset", {
+      method: "POST",
+      cache: "no-store",
+      keepalive: true
+    }).then(function (response) {
+      return response.json().then(function (result) {
+        if (!response.ok || !result.ok) {
+          throw new Error(result.error || ("重置失败（HTTP " + response.status + "）"));
+        }
+        return result;
+      });
+    });
+    resetRequest = resetRequest.finally(function () {
+      resetRequest = null;
+    });
+    return resetRequest;
   }
 
   // 用最终 turns 重绘整篇记录；turns 为空时保留流式视图。
@@ -100,6 +129,18 @@
     }
   }
 
+  // 行按 turn 归并，但保留原句 id 供行内逐句更新样式。
+  function adaptEvent(event) {
+    if (!event) {
+      return event;
+    }
+    if (event.utt_id) {
+      event.source_utt_id = event.utt_id;
+      event.utt_id = event.turn_id || event.utt_id;
+    }
+    return event;
+  }
+
   // 处理一行完整的 NDJSON；空行与单行 JSON 解析失败都直接忽略。
   function dispatchLine(line) {
     var text = line.replace(/\r$/, "");
@@ -113,6 +154,9 @@
       return;
     }
     if (typeof window.MeetingUI.handleEvent === "function") {
+      if (event.t === "finish") {
+        finished = true;
+      }
       // 回填完成：页面从此显示说话人侧栏
       if (event.t === "speaker_diarized") {
         document.body.classList.add("is-diarized");
@@ -152,6 +196,7 @@
     }
     controller = new AbortController();
     var current = controller;
+    finished = false;
 
     // 页面查询参数 fast=1 表示加速回放；缺省按实时节奏（fast=0）。
     var fast = "0";
@@ -170,14 +215,25 @@
     var url = "/api/stream_meeting?name=" + encodeURIComponent(file.name) +
               "&fast=" + encodeURIComponent(fast);
 
-    fetch(url, {
-      method: "POST",
-      body: form,
-      signal: current.signal
+    waitForServerIdle(Date.now() + 120000).then(function () {
+      if (current.signal.aborted) {
+        return null;
+      }
+      return fetch(url, {
+        method: "POST",
+        body: form,
+        signal: current.signal
+      });
     }).then(function (response) {
-      if (!response.ok) {
-        emitFatal("HTTP " + response.status);
+      if (!response) {
         return;
+      }
+      if (!response.ok) {
+        return response.json().catch(function () {
+          return {};
+        }).then(function (result) {
+          throw new Error(result.error || ("HTTP " + response.status));
+        });
       }
       if (!response.body || typeof response.body.getReader !== "function") {
         emitFatal("当前浏览器不支持流式响应");
@@ -206,12 +262,24 @@
       }
       // 新一轮开始：回到“未回填”视图，隐藏说话人侧栏
       document.body.classList.remove("is-diarized");
+      var pending = requestBackendReset();
       if (controller) {
         controller.abort();
         controller = null;
       }
+      finished = false;
+      return pending;
     };
   }
+
+  // 刷新/关闭页面会断开 fetch；服务端检测到断流后负责取消旧任务。
+  window.addEventListener("pagehide", function () {
+    if (!controller || finished) {
+      return;
+    }
+    controller.abort();
+    controller = null;
+  });
 
   // 结束会议：让服务端停止喂流，随即走正常收尾与回填（回放/麦克风共用）。
   if (typeof window.MeetingUI.onEnd !== "function") {

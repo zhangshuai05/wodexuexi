@@ -70,11 +70,11 @@ def test_run_writes_all_contract_files(tmp_path):
 
     obj = run_offline.run(
         wav, session_dir,
-        chunk_ms=200, fast=True,
+        chunk_ms=200, fast=True, no_final_polish=True,
         session_factory=lambda p, m: FakeSession(p),
         polisher_factory=FakePolisher,
         backfill_fn=lambda wav_path, utts, models, mode: {"utt_0001": "Speaker_1"},
-        models={"vad": None, "spk": None},
+        models={"vad": None, "spk": None}, no_final_asr=True,
     )
 
     files = {p.name for p in session_dir.iterdir()}
@@ -102,7 +102,7 @@ def test_no_diar_and_no_llm(tmp_path):
         wav, session_dir,
         chunk_ms=200, fast=True, no_llm=True, no_diar=True,
         session_factory=lambda p, m: FakeSession(p),
-        models={},
+        models={}, no_final_asr=True,
     )
 
     assert obj["status"] == "transcript"
@@ -116,10 +116,10 @@ def test_events_ndjson_contains_all_events(tmp_path):
     session_dir = tmp_path / "s_3"
 
     run_offline.run(
-        wav, session_dir, chunk_ms=200, fast=True, no_diar=True,
+        wav, session_dir, chunk_ms=200, fast=True, no_diar=True, no_final_polish=True,
         session_factory=lambda p, m: FakeSession(p),
         polisher_factory=FakePolisher,
-        models={},
+        models={}, no_final_asr=True,
     )
 
     events = [json.loads(line) for line in
@@ -153,7 +153,7 @@ def test_zero_sample_wav_still_finalizes(tmp_path):
     obj = run_offline.run(
         wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
         session_factory=lambda p, m: FakeSession(p),
-        models={},
+        models={}, no_final_asr=True,
     )
 
     assert obj["status"] == "transcript"
@@ -180,12 +180,17 @@ def test_default_session_pins_end_silence(monkeypatch):
     assert captured["max_end_silence_time"] == 1000, "断句阈值必须显式 pin，不能继承上游默认值"
 
 
-def test_stereo_wav_is_rejected(tmp_path):
+def test_multichannel_wav_uses_channel_0(tmp_path):
     wav = tmp_path / "stereo.wav"
-    sf.write(str(wav), np.zeros((16000, 2), dtype=np.int16), 16000, subtype="PCM_16")
+    data = np.zeros((16000, 2), dtype=np.int16)
+    data[:, 1] = 1234
+    sf.write(str(wav), data, 16000, subtype="PCM_16")
 
-    with pytest.raises(SystemExit):
-        run_offline.run(wav, tmp_path / "s_stereo", no_llm=True, no_diar=True, models={})
+    chunks = list(run_offline.iter_audio_chunks(wav, 600))
+    fed = np.frombuffer(b"".join(chunk for chunk, _ in chunks), dtype=np.int16)
+
+    assert fed.size == 16000
+    assert not fed.any(), "必须只取 ch0，不能把右声道混进来"
 
 
 class _FlakySession(FakeSession):
@@ -212,7 +217,7 @@ def test_exception_mid_feed_still_writes_transcript(tmp_path):
         run_offline.run(
             wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
             session_factory=lambda p, m: _FlakySession(p),
-            models={},
+            models={}, no_final_asr=True,
         )
 
     assert (session_dir / "transcript.json").exists()
@@ -231,15 +236,18 @@ def test_rerun_clears_stale_derived_artifacts(tmp_path):
         '{"utt_id": "utt_old", "start_ms": 0, "end_ms": 10, "raw_text": "旧"}\n',
         encoding="utf-8")
     (session_dir / "events.ndjson").write_text('{"t": "old"}\n', encoding="utf-8")
+    (session_dir / "turns_polished.json").write_text(
+        '{"turn_old": "旧精修"}', encoding="utf-8")
 
     run_offline.run(
         wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
         session_factory=lambda p, m: FakeSession(p),
-        models={},
+        models={}, no_final_asr=True,
     )
 
     assert not (session_dir / "diarization.json").exists()
     assert not (session_dir / "polished.json").exists()
+    assert not (session_dir / "turns_polished.json").exists()
     utt_text = (session_dir / "utterances.jsonl").read_text(encoding="utf-8")
     event_text = (session_dir / "events.ndjson").read_text(encoding="utf-8")
     assert "utt_old" not in utt_text
@@ -262,11 +270,11 @@ def test_on_event_receives_pipeline_events(tmp_path):
     seen = []
 
     run_offline.run(
-        wav, session_dir, chunk_ms=200, fast=True,
+        wav, session_dir, chunk_ms=200, fast=True, no_final_polish=True,
         session_factory=lambda p, m: FakeSession(p),
         polisher_factory=FakePolisher,
         backfill_fn=lambda wav_path, utts, models, mode: {"utt_0001": "Speaker_1"},
-        models={},
+        models={}, no_final_asr=True,
         on_event=seen.append,
     )
 
@@ -286,11 +294,11 @@ def test_events_have_turn_fields(tmp_path):
     seen = []
 
     run_offline.run(
-        wav, session_dir, chunk_ms=200, fast=True,
+        wav, session_dir, chunk_ms=200, fast=True, no_final_polish=True,
         session_factory=lambda p, m: FakeSession(p),
         polisher_factory=FakePolisher,
         backfill_fn=lambda wav_path, utts, models, mode: {"utt_0001": "Speaker_1"},
-        models={},
+        models={}, no_final_asr=True,
         on_event=seen.append,
     )
 
@@ -324,7 +332,7 @@ def test_backfill_failure_still_closes_polisher(tmp_path):
             session_factory=lambda p, m: FakeSession(p),
             polisher_factory=factory,
             backfill_fn=boom,
-            models={},
+            models={}, no_final_asr=True,
         )
 
     assert len(created) == 1
@@ -339,7 +347,7 @@ def test_should_stop_still_freezes_and_writes_transcript(tmp_path):
     obj = run_offline.run(
         wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
         session_factory=lambda p, m: FakeSession(p),
-        models={},
+        models={}, no_final_asr=True,
         should_stop=lambda: True,
     )
 
@@ -360,9 +368,122 @@ def test_should_stop_mid_feed_keeps_partial_transcript(tmp_path):
     obj = run_offline.run(
         wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
         session_factory=lambda p, m: FakeSession(p),
-        models={},
+        models={}, no_final_asr=True,
         should_stop=stop_after_two,
     )
 
     assert obj["utterances"], "中途取消也必须冻结已锁定句子"
     assert obj["duration_ms"] < 1000, "中途取消后不应喂完整段音频"
+
+
+def test_offline_second_pass_sets_final_text(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+    session_dir = tmp_path / "s_final_asr"
+
+    def fake_offline(audio_path, utterances, on_progress=None, should_abort=None):
+        assert Path(audio_path).name == "session_audio.wav"
+        return {u["utt_id"]: {"text": "最终稿。", "start_ms": u["start_ms"],
+                              "end_ms": u["end_ms"]} for u in utterances}
+
+    obj = run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
+        session_factory=lambda p, m: FakeSession(p),
+        models={}, offline_asr_fn=fake_offline,
+    )
+
+    assert obj["utterances"][0]["final_text"] == "最终稿。"
+    assert obj["utterances"][0]["raw_text"] == "你好", "直播稿必须保留"
+    assert obj["turns"][0]["text"] == "最终稿。"
+    assert (session_dir / "final_text.json").exists()
+
+
+def test_offline_second_pass_failure_keeps_live_text(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+    session_dir = tmp_path / "s_final_asr_fail"
+
+    def boom(audio_path, utterances, on_progress=None, should_abort=None):
+        raise RuntimeError("model missing")
+
+    obj = run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
+        session_factory=lambda p, m: FakeSession(p),
+        models={}, offline_asr_fn=boom,
+    )
+
+    assert obj["utterances"][0]["final_text"] is None
+    assert obj["turns"][0]["text"] == "你好"
+    assert not (session_dir / "final_text.json").exists()
+
+
+def test_no_final_asr_skips_offline_pass(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+    session_dir = tmp_path / "s_final_asr_skip"
+    calls = []
+
+    def fake_offline(audio_path, utterances, on_progress=None, should_abort=None):
+        calls.append(utterances)
+        return {}
+
+    obj = run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True, no_llm=True, no_diar=True,
+        no_final_asr=True,
+        session_factory=lambda p, m: FakeSession(p),
+        models={}, offline_asr_fn=fake_offline,
+    )
+
+    assert calls == []
+    assert obj["utterances"][0]["final_text"] is None
+    assert not (session_dir / "final_text.json").exists()
+
+
+def test_final_polish_overrides_turn_text(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+    session_dir = tmp_path / "s_final"
+    seen_turns = []
+
+    def fake_final(turns, on_progress=None, should_abort=None):
+        seen_turns.extend(turns)
+        first = turns[0]
+        return {first["turn_id"]: {"text": "你好呀。",
+                                   "start_ms": first["start_ms"],
+                                   "end_ms": first["end_ms"]}}
+
+    obj = run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True, no_diar=True,
+        session_factory=lambda p, m: FakeSession(p),
+        polisher_factory=FakePolisher,
+        final_polish_fn=fake_final,
+        models={}, no_final_asr=True,
+    )
+
+    assert seen_turns[0]["text"] == "你好。", "精修输入必须是直播润色稿"
+    assert obj["turns"][0]["text"] == "你好呀。"
+    assert obj["utterances"][0]["raw_text"] == "你好", "raw 必须保留以便回溯"
+    assert (session_dir / "turns_polished.json").exists()
+
+
+def test_no_final_polish_skips_second_pass(tmp_path):
+    wav = tmp_path / "in.wav"
+    _write_wav(wav)
+    session_dir = tmp_path / "s_final_skip"
+    calls = []
+
+    def fake_final(turns, on_progress=None, should_abort=None):
+        calls.append(turns)
+        return {}
+
+    obj = run_offline.run(
+        wav, session_dir, chunk_ms=200, fast=True, no_diar=True, no_final_polish=True,
+        session_factory=lambda p, m: FakeSession(p),
+        polisher_factory=FakePolisher,
+        final_polish_fn=fake_final,
+        models={}, no_final_asr=True,
+    )
+
+    assert calls == []
+    assert obj["turns"][0]["text"] == "你好。"
+    assert not (session_dir / "turns_polished.json").exists()

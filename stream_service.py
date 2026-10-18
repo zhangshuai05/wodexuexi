@@ -44,8 +44,16 @@ BRIDGE_TAG = b'<script src="/meeting_bridge.js"></script>\n'
 
 # 同一时刻只允许一场会议；第二个请求直接 409。
 _SESSION_LOCK = threading.Lock()
+# Reset 等待正在运行的流水线完整退出后再让前端开始下一场。
+_SESSION_IDLE = threading.Event()
+_SESSION_IDLE.set()
+_SESSION_STATE_LOCK = threading.Lock()
+_RESET_REQUEST_LOCK = threading.Lock()
+_RESET_PENDING = threading.Event()
 # 用户点“结束会议”时置位；喂流循环每块检查一次，走正常收尾与回填
 _CANCEL = threading.Event()
+# 重置或浏览器断开时置位；跳过后续回填并尽快释放会议锁。
+_RESET = threading.Event()
 
 # 模型单例：首次请求/预加载时装载，之后复用。
 _MODELS: Optional[Dict] = None
@@ -122,7 +130,8 @@ def _convert_to_16k_mono(src: Path, dst: Path) -> None:
     if ffmpeg is None:
         raise FfmpegMissing("ffmpeg")
     proc = subprocess.run(
-        [ffmpeg, "-y", "-i", str(src), "-ar", "16000", "-ac", "1",
+        # 多声道取 ch0，不用 -ac 1 下混：8 通道平均会相位抵消，ch0 实测好 6-11 个点
+        [ffmpeg, "-y", "-i", str(src), "-af", "pan=mono|c0=c0", "-ar", "16000",
          "-c:a", "pcm_s16le", str(dst)],
         capture_output=True,
     )
@@ -165,6 +174,7 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         # 必须在 BaseHTTPRequestHandler.__init__（会立刻进入 handle 循环）之前初始化
         self._dead = False
+        self._session_active = False
         self._write_lock = threading.Lock()
         super().__init__(*args, **kwargs)
 
@@ -259,6 +269,11 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.flush()
         except (BrokenPipeError, OSError):
             self._dead = True
+            if self._session_active:
+                # 刷新/关闭页面会断开 NDJSON 响应；把它当作重置，
+                # 不要让后台继续处理完整段音频或启动说话人回填。
+                _RESET.set()
+                _CANCEL.set()
 
     # ---- 路由 ----
 
@@ -269,7 +284,11 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
         elif path == "/meeting_bridge.js":
             self._send_bridge()
         elif path == "/api/health":
-            self._send_json(200, {"ok": True, "busy": _SESSION_LOCK.locked()})
+            self._send_json(200, {
+                "ok": True,
+                "busy": _SESSION_LOCK.locked(),
+                "resetting": _RESET_PENDING.is_set(),
+            })
         else:
             self._send_json(404, {"error": "not found"})
 
@@ -278,6 +297,22 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/stream_meeting/cancel":
             _CANCEL.set()
             self._send_json(200, {"ok": True})
+            return
+        if parsed.path == "/api/stream_meeting/reset":
+            # 阻止新会议抢在旧会议退出前取得锁；reset 请求之间也串行化。
+            with _RESET_REQUEST_LOCK:
+                with _SESSION_STATE_LOCK:
+                    _RESET_PENDING.set()
+                    _RESET.set()
+                    _CANCEL.set()
+                idle = _SESSION_IDLE.wait(timeout=120)
+                with _SESSION_STATE_LOCK:
+                    _RESET_PENDING.clear()
+                self._send_json(200 if idle else 202, {
+                    "ok": idle,
+                    "busy": not idle,
+                    "error": None if idle else "上一场会议仍在停止，请稍后重试重置",
+                })
             return
         if parsed.path != "/api/stream_meeting":
             self._send_json(404, {"error": "not found"})
@@ -288,11 +323,21 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
         fast = query.get("fast", ["0"])[0].lower() in ("1", "true", "yes")
 
         self._dead = False
-        if not _SESSION_LOCK.acquire(blocking=False):
-            self._send_json(409, {"error": "已有会议在运行"})
+        with _SESSION_STATE_LOCK:
+            if _RESET_PENDING.is_set():
+                acquired = False
+                busy_error = "正在重置上一场会议，请稍后再试"
+            else:
+                acquired = _SESSION_LOCK.acquire(blocking=False)
+                busy_error = "已有会议在运行"
+            if acquired:
+                _SESSION_IDLE.clear()
+                _CANCEL.clear()
+                _RESET.clear()
+                self._session_active = True
+        if not acquired:
+            self._send_json(409, {"error": busy_error})
             return
-        # 新一轮开始，清掉上一轮可能残留的取消信号
-        _CANCEL.clear()
 
         tmpdir: Optional[Path] = None
         response_started = False
@@ -316,6 +361,9 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
             body = self.rfile.read(length)
             if len(body) != length:
                 self._send_json(400, {"error": "请求体不完整"})
+                return
+            if _RESET.is_set():
+                self._send_json(409, {"error": "会议已重置"})
                 return
 
             content_type = self.headers.get("Content-Type", "")
@@ -366,7 +414,11 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
                 on_event=self._emit_event,
                 on_progress=self._emit_event,
                 should_stop=_CANCEL.is_set,
+                should_abort=_RESET.is_set,
             )
+
+            if _RESET.is_set():
+                return
 
             # run() 返回时 session.json 已合并完成；diarization.json 可能存在也可能不存在
             store = SessionStore(session_dir)
@@ -385,6 +437,8 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
             self._emit_event({"t": "finish"})
             self._end_chunks_safely()
         except Exception as exc:  # noqa: BLE001 - 单场会议异常不得杀死服务
+            if _RESET.is_set():
+                return
             msg = f"{type(exc).__name__}: {exc}"
             if response_started:
                 self._emit_event({"t": "error", "msg": msg, "fatal": True})
@@ -393,9 +447,12 @@ class StreamRequestHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json(500, {"error": msg})
         finally:
-            _SESSION_LOCK.release()
             if tmpdir is not None:
                 shutil.rmtree(tmpdir, ignore_errors=True)
+            self._session_active = False
+            with _SESSION_STATE_LOCK:
+                _SESSION_LOCK.release()
+                _SESSION_IDLE.set()
 
 
 class _SingleInstanceServer(ThreadingHTTPServer):

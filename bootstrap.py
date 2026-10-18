@@ -23,9 +23,11 @@ _SUBPATHS: tuple[Path, ...] = (
 )
 
 BASELINE = {
-    # 2026-10-17 14:06 本机基线；上游由另一个 AI 并行修改，变更时需复核后刷新
-    "streaming_asr_engine.py": ("f65dd78a03b50619", 14087),
-    "offline_diarizer.py": ("8fd519e6700e08da", 6357),
+    # 2026-10-18 上游封板指纹（Agent A 最终版）：
+    # streaming_asr_engine: VAD 同块结束+开始跨句吞字修复；1000ms 显式生效
+    # offline_diarizer: 默认 normalize_peak=0.85 + with_segments=True 句内切分
+    "streaming_asr_engine.py": ("5152424c04f4e572", 15831),
+    "offline_diarizer.py": ("eb454a8bf70d2081", 15061),
 }
 
 

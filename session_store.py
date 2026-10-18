@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from turns import build_turns
+from turns import build_turns, split_utterance_by_sub_turns
 
 SCHEMA_VERSION = 1
 
@@ -131,6 +131,16 @@ class SessionStore:
         _atomic_write_json(path, mapping)
         return path
 
+    def write_turns_polished(self, mapping: Dict[str, str]) -> Path:
+        path = self.dir / "turns_polished.json"
+        _atomic_write_json(path, mapping)
+        return path
+
+    def write_final_text(self, mapping: Dict[str, Dict]) -> Path:
+        path = self.dir / "final_text.json"
+        _atomic_write_json(path, mapping)
+        return path
+
     # ---- 读取 ----
 
     def read_json(self, name: str) -> Optional[Dict[str, Any]]:
@@ -148,22 +158,48 @@ class SessionStore:
             transcript = self.read_json("transcript.json") or {"utterances": []}
             polished = self.read_json("polished.json") or {}
             diarization = self.read_json("diarization.json")
+            final_text = self.read_json("final_text.json") or {}
 
             merged = []
             for utt in transcript.get("utterances", []):
                 uid = utt["utt_id"]
                 polish = polished.get(uid, {})
                 speaker = (diarization or {}).get(uid, {})
-                merged.append({
+                if not isinstance(speaker, dict):
+                    speaker = {}
+                parent = {
                     **utt,
                     "polished_text": polish.get("polished_text", utt.get("raw_text", "")),
+                    "final_text": (final_text.get(uid) or {}).get("text"),
                     "corrected": bool(polish.get("corrected", False)),
                     "bypassed": bool(polish.get("bypassed", False)),
                     "error": polish.get("error"),
                     "spk": speaker.get("spk"),
                     "spk_label": speaker.get("spk_label"),
                     "overlap_spk": None,
-                })
+                }
+                # 句内换人：上游 sub_turns 把长句拆成单人子段；离线二遍会逐子段
+                # 重转写（final_text 用子段 id），turns 因此不会被整句投票吞掉。
+                for part in split_utterance_by_sub_turns(
+                        parent, speaker.get("sub_turns")):
+                    sub_final = final_text.get(part["utt_id"])
+                    if isinstance(sub_final, dict) and sub_final.get("text") is not None:
+                        part["final_text"] = sub_final["text"]
+                    merged.append(part)
+
+            turns = build_turns(merged)
+            turns_polished = self.read_json("turns_polished.json") or {}
+            for turn in turns:
+                entry = turns_polished.get(turn["turn_id"])
+                if not isinstance(entry, dict):
+                    continue
+                # 独立重跑回填可能改变 turn 边界；对不上就保留直播稿，宁可少改
+                if (entry.get("start_ms") != turn["start_ms"]
+                        or entry.get("end_ms") != turn["end_ms"]):
+                    continue
+                polished_text = entry.get("text")
+                if isinstance(polished_text, str) and polished_text:
+                    turn["text"] = polished_text
 
             obj = {
                 "schema_version": SCHEMA_VERSION,
@@ -175,7 +211,7 @@ class SessionStore:
                 "duration_ms": transcript.get("duration_ms"),
                 "utterances": merged,
                 # utterances 是声纹/审计粒度；turns 是显示/导出粒度
-                "turns": build_turns(merged),
+                "turns": turns,
             }
             _atomic_write_json(self.dir / "session.json", obj)
             return obj

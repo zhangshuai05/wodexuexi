@@ -22,14 +22,51 @@ import bootstrap
 _LABEL_RE = re.compile(r"^Speaker_(\d+)$")
 
 
-def to_contract(mapping: Dict[str, str]) -> Dict[str, Dict]:
+def _speaker_fields(label) -> tuple[int, str]:
+    match = _LABEL_RE.match(str(label))
+    if match is None or int(match.group(1)) < 1:
+        raise ValueError(f"上游返回了无法识别的说话人标签: {label!r}")
+    index = int(match.group(1)) - 1
+    return index, f"speaker_{index}"
+
+
+def to_contract(raw: Dict) -> Dict[str, Dict]:
+    """上游扁平 mapping 或 with_segments=True 的富结构 -> session 契约。
+
+    富结构：{"mapping": {utt_id: "Speaker_N"}, "segments": {...}, "sub_turns": {...}}
+    旧扁平结构继续兼容；sub_turns 里的 speaker 也换算成 speaker_p。
+    """
+    if isinstance(raw, dict) and "mapping" in raw:
+        mapping = raw.get("mapping") or {}
+        sub_map = raw.get("sub_turns") or {}
+    else:
+        mapping = raw or {}
+        sub_map = {}
+
     out: Dict[str, Dict] = {}
     for utt_id, label in mapping.items():
-        match = _LABEL_RE.match(str(label))
-        if match is None or int(match.group(1)) < 1:
-            raise ValueError(f"上游返回了无法识别的说话人标签: {label!r} (utt_id={utt_id})")
-        index = int(match.group(1)) - 1
-        out[utt_id] = {"spk": index, "spk_label": f"speaker_{index}"}
+        index, spk_label = _speaker_fields(label)
+        entry: Dict = {"spk": index, "spk_label": spk_label}
+        subs = []
+        for item in (sub_map.get(utt_id) or []):
+            if not isinstance(item, dict):
+                continue
+            try:
+                start, end = int(item["start_ms"]), int(item["end_ms"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if end <= start:
+                continue
+            try:
+                sub_index, sub_label = _speaker_fields(
+                    item.get("speaker") or item.get("spk_label"))
+            except ValueError:
+                continue
+            subs.append({"start_ms": start, "end_ms": end,
+                         "spk": sub_index, "spk_label": sub_label})
+        if subs:
+            entry["sub_turns"] = subs
+        out[utt_id] = entry
     return out
 
 
@@ -79,7 +116,9 @@ def load_utterances(session_dir: Path) -> List[Dict]:
 
 def _real_backfill(wav_path, utterances, models, mode):
     from offline_diarizer import backfill_speakers
-    return backfill_speakers(wav_path, utterances, models=models, mode=mode)
+    # 2026-10-18 上游封板：with_segments=True 返回 sub_turns（句内稳定换人 >=1.0s）
+    return backfill_speakers(wav_path, utterances, models=models, mode=mode,
+                             with_segments=True)
 
 
 def run_backfill(

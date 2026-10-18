@@ -159,8 +159,9 @@
       line-height: 1.85;
       white-space: normal;
     }
-    .draft-italic { color: #7b8881; font-style: italic; }
+    .draft-italic { color: #7b8881; font-style: italic; opacity: 0.82; }
     .confirmed-normal { color: #25322c; font-style: normal; font-weight: 450; }
+    .utt-text span { transition: color 300ms ease, opacity 300ms ease; }
     .utt-text.is-typing::after {
       display: inline-block;
       width: 1px;
@@ -332,17 +333,28 @@
         article.append(side, main);
         transcript.appendChild(article);
 
-        var row = { speakerSlot: speakerSlot, time: time, state: state, text: text };
+        var row = { speakerSlot: speakerSlot, time: time, state: state, text: text, spans: {} };
         rows.set(event.utt_id, row);
         document.getElementById("utterance-count").textContent = String(rows.size);
         return row;
       }
       function getRow(event) { return rows.get(event.utt_id) || makeRow(event); }
-      function setText(row, value, style, typing) {
-        row.text.textContent = value || "";
-        row.text.classList.remove("draft-italic", "confirmed-normal", "is-typing");
-        if (style) row.text.classList.add(style);
-        if (typing) row.text.classList.add("is-typing");
+      function sentenceSpan(row, key) {
+        var span = row.spans[key];
+        if (!span) {
+          span = document.createElement("span");
+          span.className = "draft-italic";
+          row.spans[key] = span;
+          row.text.appendChild(span);
+        }
+        return span;
+      }
+      // 每句一个 span：句子结束时只切 class，文字节点原地保留，避免重建和跳动
+      function setSentence(row, key, text, style) {
+        var span = sentenceSpan(row, key);
+        if (span.className !== style) span.className = style;
+        var value = text || "";
+        if (span.textContent !== value) span.textContent = value;
       }
       function applyMapping(mapping) {
         if (!mapping) return;
@@ -370,7 +382,9 @@
           row.time.textContent = formatRange(event.start_ms, null);
           row.state.className = "utt-state";
           row.state.textContent = "正在识别";
-          setText(row, event.text || "", "draft-italic", true);
+          setSentence(row, event.source_utt_id || event.utt_id,
+                      event.text || "", "draft-italic");
+          row.text.classList.add("is-typing");
           document.getElementById("transcript-hint").textContent = "正在接收语音，字幕会随识别结果展开";
         } else if (event.t === "asr_final") {
           row = getRow(event);
@@ -379,14 +393,18 @@
           row.time.textContent = formatRange(event.start_ms, event.end_ms);
           row.state.className = "utt-state is-pending";
           row.state.textContent = "润色中";
-          setText(row, event.raw_text || "", "draft-italic", false);
+          // 句子已结束：同一个 span 从斜体切到正体，文字不移动
+          setSentence(row, event.source_utt_id || event.utt_id,
+                      event.raw_text || "", "confirmed-normal");
+          row.text.classList.remove("is-typing");
           document.getElementById("transcript-hint").textContent = "句尾已确认，正在进行异步校正";
         } else if (event.t === "llm_confirmed") {
           row = getRow(event);
           row.time.textContent = formatRange(event.start_ms, event.end_ms);
           row.state.className = "utt-state is-confirmed";
           row.state.textContent = event.corrected ? "已校正" : (event.bypassed ? "短句略过" : "原文保留");
-          setText(row, event.polished_text || event.raw_text || "", "confirmed-normal", false);
+          setSentence(row, event.source_utt_id || event.utt_id,
+                      event.polished_text || event.raw_text || "", "confirmed-normal");
           if (currentUttId === event.utt_id) {
             currentUttId = null;
           }
@@ -451,7 +469,35 @@
         detail.textContent = "点击“开始会议”接入麦克风，或选择音频文件进行模拟。字幕会在这里持续展开。";
         empty.append(title, detail);
         transcript.appendChild(empty);
-        if (typeof window.MeetingUI.onReset === "function") window.MeetingUI.onReset();
+        var resetTask = null;
+        if (typeof window.MeetingUI.onReset === "function") {
+          resetTask = window.MeetingUI.onReset();
+        }
+        if (resetTask && typeof resetTask.then === "function") {
+          var startButton = document.getElementById("start-meeting");
+          var endButton = document.getElementById("end-meeting");
+          var resetButton = document.getElementById("reset-session");
+          var simulateButton = document.getElementById("simulate-audio");
+          startButton.disabled = true;
+          endButton.disabled = true;
+          resetButton.disabled = true;
+          simulateButton.disabled = true;
+          document.getElementById("transcript-hint").textContent = "正在停止上一场会议…";
+          setStatus("正在重置", "live");
+          resetTask.then(function () {
+            startButton.disabled = false;
+            endButton.disabled = false;
+            resetButton.disabled = false;
+            simulateButton.disabled = !document.getElementById("audio-file").files.length;
+            document.getElementById("transcript-hint").textContent = "重置完成，可以开始新会议";
+            setStatus("准备就绪", "");
+          }).catch(function (error) {
+            resetButton.disabled = false;
+            document.getElementById("transcript-hint").textContent = "上一场会议仍在停止，可稍后再次重置";
+            setStatus("重置未完成", "error");
+            showNotice(String(error), true);
+          });
+        }
       }
 
       function startMeeting() {

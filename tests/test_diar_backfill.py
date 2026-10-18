@@ -171,3 +171,43 @@ def test_load_utterances_handles_truncated_utf8(tmp_path):
     utts = load_utterances(store.dir)
 
     assert [u["utt_id"] for u in utts] == ["u1"]
+
+
+def test_to_contract_accepts_rich_result_with_sub_turns():
+    raw = {
+        "mapping": {"u1": "Speaker_2"},
+        "segments": {},
+        "sub_turns": {"u1": [
+            {"start_ms": 100, "end_ms": 1100, "speaker": "Speaker_3"},
+        ]},
+    }
+
+    out = to_contract(raw)
+
+    assert out["u1"]["spk"] == 1
+    assert out["u1"]["spk_label"] == "speaker_1"
+    assert out["u1"]["sub_turns"] == [
+        {"start_ms": 100, "end_ms": 1100, "spk": 2, "spk_label": "speaker_2"}]
+
+
+def test_run_backfill_writes_sub_turns_and_expands_session(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript(
+        [{"utt_id": "u1", "start_ms": 0, "end_ms": 2000, "raw_text": "甲乙"}],
+        duration_ms=2000,
+    )
+    store.audio_path.write_bytes(b"RIFF")
+
+    def fake(wav_path, utterances, models, mode):
+        return {"mapping": {"u1": "Speaker_1"},
+                "sub_turns": {"u1": [{"start_ms": 500, "end_ms": 1500,
+                                      "speaker": "Speaker_2"}]}}
+
+    out = run_backfill(store.dir, backfill=fake)
+
+    assert out["u1"]["sub_turns"][0]["spk_label"] == "speaker_1"
+    session = store.build_session_json()
+    assert [u["utt_id"] for u in session["utterances"]] == [
+        "u1#1", "u1#2", "u1#3"]
+    assert [u["spk_label"] for u in session["utterances"]] == [
+        "speaker_0", "speaker_1", "speaker_0"]

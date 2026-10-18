@@ -92,6 +92,48 @@ def test_session_json_has_turns(tmp_path):
     assert obj["turns"][0]["spk_label"] == "speaker_0"
 
 
+def test_turns_polished_overrides_turn_text_only(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript([_utterance()], duration_ms=1000)
+    turn = store.build_session_json()["turns"][0]
+    store.write_turns_polished({
+        turn["turn_id"]: {"text": "你好呀。", "start_ms": turn["start_ms"],
+                          "end_ms": turn["end_ms"]},
+    })
+    obj = store.build_session_json()
+
+    assert obj["turns"][0]["text"] == "你好呀。"
+    assert obj["utterances"][0]["raw_text"] == "你好", "raw 必须保留以便 A/B"
+    assert obj["utterances"][0]["polished_text"] == "你好", "句级润色不覆盖"
+
+
+def test_turns_polished_is_ignored_when_turn_boundary_changed(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript([_utterance()], duration_ms=1000)
+    store.write_turns_polished({
+        "turn_0001": {"text": "错配的精修稿", "start_ms": 0, "end_ms": 999},
+    })
+
+    obj = store.build_session_json()
+
+    assert obj["turns"][0]["text"] == "你好", "边界不符必须回退直播稿"
+
+
+def test_final_text_overrides_turns_but_keeps_live_fields(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript([_utterance()], duration_ms=1000)
+    store.write_final_text({
+        "utt_0001": {"text": "最终稿。", "start_ms": 0, "end_ms": 1000},
+    })
+
+    obj = store.build_session_json()
+
+    assert obj["utterances"][0]["final_text"] == "最终稿。"
+    assert obj["utterances"][0]["raw_text"] == "你好"
+    assert obj["utterances"][0]["polished_text"] == "你好"
+    assert obj["turns"][0]["text"] == "最终稿。"
+
+
 def test_build_is_idempotent(tmp_path):
     store = SessionStore(tmp_path / "s_1")
     store.write_transcript([_utterance()], duration_ms=1000)
@@ -204,3 +246,49 @@ def test_new_session_dir_atomic_claim(tmp_path):
     assert len(results) == 2
     assert results[0] != results[1], "并发认领必须得到不同目录"
     assert all(path.is_dir() for path in results)
+
+
+def test_sub_turns_expand_utterances_and_split_turns(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript([
+        _utterance("u1", 0, 10000, "甲乙丙丁戊己庚辛壬癸"),
+        _utterance("u2", 11000, 12000, "尾"),
+    ], duration_ms=12000)
+    store.write_diarization({
+        "u1": {"spk": 0, "spk_label": "speaker_0", "sub_turns": [
+            {"start_ms": 4000, "end_ms": 6000, "spk": 1, "spk_label": "speaker_1"},
+        ]},
+        "u2": {"spk": 0, "spk_label": "speaker_0"},
+    })
+
+    obj = store.build_session_json()
+
+    assert [u["utt_id"] for u in obj["utterances"]] == [
+        "u1#1", "u1#2", "u1#3", "u2"]
+    assert [u["spk_label"] for u in obj["utterances"][:3]] == [
+        "speaker_0", "speaker_1", "speaker_0"]
+    assert "".join(u["raw_text"] for u in obj["utterances"][:3]) == "甲乙丙丁戊己庚辛壬癸"
+    # 句内换人必须断开 turn，且 u1#3 与 u2 同说话人、间隔 1s -> 合并
+    assert [t["spk_label"] for t in obj["turns"]] == [
+        "speaker_0", "speaker_1", "speaker_0"]
+    assert (obj["turns"][1]["start_ms"], obj["turns"][1]["end_ms"]) == (4000, 6000)
+
+
+def test_sub_turn_final_text_uses_sub_utt_id(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript([_utterance("u1", 0, 10000, "一二三四五六七八九十")],
+                           duration_ms=10000)
+    store.write_diarization({
+        "u1": {"spk": 0, "spk_label": "speaker_0", "sub_turns": [
+            {"start_ms": 4000, "end_ms": 6000, "spk": 1, "spk_label": "speaker_1"},
+        ]},
+    })
+    store.write_final_text({
+        "u1#2": {"text": "子段最终稿", "start_ms": 4000, "end_ms": 6000},
+    })
+
+    obj = store.build_session_json()
+    sub = next(u for u in obj["utterances"] if u["utt_id"] == "u1#2")
+
+    assert sub["final_text"] == "子段最终稿"
+    assert [t["text"] for t in obj["turns"]][1] == "子段最终稿"

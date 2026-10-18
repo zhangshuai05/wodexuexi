@@ -6,17 +6,19 @@ from turns import (
     StreamTurnTracker,
     build_turns,
     join_texts,
+    split_utterance_by_sub_turns,
 )
 
 
 def _utt(uid, start, end, text, spk_label=None, spk=None, polished=None,
-         corrected=False, bypassed=False):
+         corrected=False, bypassed=False, final=None):
     return {
         "utt_id": uid,
         "start_ms": start,
         "end_ms": end,
         "raw_text": text,
         "polished_text": text if polished is None else polished,
+        "final_text": final,
         "spk": spk,
         "spk_label": spk_label,
         "corrected": corrected,
@@ -144,6 +146,23 @@ def test_build_turns_empty_input():
     assert build_turns([]) == []
 
 
+def test_build_turns_empty_final_text_does_not_fall_back():
+    utts = [
+        _utt("utt_0001", 0, 1000, "直播稿", spk_label="speaker_0", spk=0, final=""),
+    ]
+
+    turns = build_turns(utts)
+
+    assert len(turns) == 1
+    assert turns[0]["text"] == ""
+
+
+def test_build_turns_missing_final_text_falls_back_to_raw():
+    utts = [_utt("utt_0001", 0, 1000, "直播稿", final=None)]
+
+    assert build_turns(utts)[0]["text"] == "直播稿"
+
+
 def test_build_turns_propagates_corrected_and_bypassed_flags():
     utts = [
         # 同一说话人、间隔足够小 -> 合并为一个 turn
@@ -259,3 +278,64 @@ def test_stream_turn_tracker_is_thread_safe():
         t.join()
 
     assert errors == []
+
+
+def test_tracker_splits_confirmed_and_partial_text():
+    tracker = StreamTurnTracker(gap_ms=5000)
+
+    ev = tracker.assign({"t": "asr_partial", "utt_id": "u1", "start_ms": 0, "text": "你"})
+    assert ev["turn_confirmed_text"] == ""
+    assert ev["turn_partial_text"] == "你"
+
+    ev = tracker.assign({"t": "asr_final", "utt_id": "u1", "start_ms": 0, "end_ms": 1000,
+                         "raw_text": "你好"})
+    assert ev["turn_confirmed_text"] == "你好"
+    assert ev["turn_partial_text"] == ""
+
+    ev = tracker.assign({"t": "asr_partial", "utt_id": "u2", "start_ms": 1200, "text": "世"})
+    assert ev["turn_confirmed_text"] == "你好"
+    assert ev["turn_partial_text"] == "世"
+
+    ev = tracker.assign({"t": "llm_confirmed", "utt_id": "u1", "start_ms": 0, "end_ms": 1000,
+                         "raw_text": "你好", "polished_text": "你好。"})
+    assert ev["turn_confirmed_text"] == "你好。"
+    assert ev["turn_partial_text"] == "世"
+
+
+# ---- split_utterance_by_sub_turns ----
+
+def test_split_utterance_partitions_and_splits_text():
+    utt = _utt("utt_0001", 0, 10000, "甲乙丙丁戊己庚辛壬癸",
+               spk_label="speaker_0", spk=0)
+    parts = split_utterance_by_sub_turns(utt, [
+        {"start_ms": 4000, "end_ms": 6000, "spk": 1, "spk_label": "speaker_1"},
+    ])
+
+    assert [p["utt_id"] for p in parts] == [
+        "utt_0001#1", "utt_0001#2", "utt_0001#3"]
+    assert [(p["start_ms"], p["end_ms"]) for p in parts] == [
+        (0, 4000), (4000, 6000), (6000, 10000)]
+    assert [p["spk_label"] for p in parts] == [
+        "speaker_0", "speaker_1", "speaker_0"]
+    assert [p["is_sub_turn"] for p in parts] == [False, True, False]
+    assert all(p["parent_utt_id"] == "utt_0001" for p in parts)
+    assert "".join(p["raw_text"] for p in parts) == "甲乙丙丁戊己庚辛壬癸"
+
+
+def test_split_utterance_without_sub_turns_is_noop():
+    utt = _utt("u1", 0, 1000, "你好", spk_label="speaker_0", spk=0)
+
+    assert split_utterance_by_sub_turns(utt, None) == [utt]
+    assert split_utterance_by_sub_turns(utt, []) == [utt]
+
+
+def test_split_utterance_merges_adjacent_same_speaker_fragments():
+    utt = _utt("u1", 0, 10000, "abcdefghij", spk_label="speaker_0", spk=0)
+    parts = split_utterance_by_sub_turns(utt, [
+        {"start_ms": 4000, "end_ms": 5000, "spk": 1, "spk_label": "speaker_1"},
+        {"start_ms": 5050, "end_ms": 6000, "spk": 1, "spk_label": "speaker_1"},
+    ])
+
+    assert [p["spk_label"] for p in parts] == [
+        "speaker_0", "speaker_1", "speaker_0"]
+    assert (parts[1]["start_ms"], parts[1]["end_ms"]) == (4000, 6000)

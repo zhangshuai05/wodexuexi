@@ -34,12 +34,16 @@ def test_accept_rewrite_rejects_shrink():
     assert accept_rewrite("我们今天把思路整理一下", "今天") is False
 
 
-def test_accept_rewrite_rejects_digit_change():
-    assert accept_rewrite("我们3点开会", "我们4点开会") is False
+def test_accept_rewrite_allows_digit_change():
+    # 2026-10-18 用户拍板移除数字集合守卫：同音误识/格式转换不能被误杀
+    assert accept_rewrite("我们3点开会", "我们4点开会") is True
+    assert accept_rewrite("我们三点开会", "我们四点开会") is True
 
 
-def test_digit_guard_sees_chinese_numerals():
-    assert accept_rewrite("我们三点开会", "我们四点开会") is False
+def test_strict_rewrite_preserves_non_punctuation_length():
+    assert accept_rewrite("我们3点开会", "我们4点开会", strict=True) is True
+    assert accept_rewrite("你好", "你好啊", strict=True) is False
+    assert accept_rewrite("你好", "你好。", strict=True) is True
 
 
 def test_accept_rewrite_rejects_empty():
@@ -119,6 +123,77 @@ def test_guard_rejection_keeps_raw():
     assert out["utt_0001"]["polished_text"] == "大家早上好今天我们把思露整理一下"
     assert out["utt_0001"]["corrected"] is False
     assert out["utt_0001"]["error"] == "守卫驳回改写"
+
+
+def test_uses_turn_context_in_prompt():
+    prompts = []
+
+    def fake_call(prompt):
+        prompts.append(prompt)
+        return '{"polished": "改好了。"}'
+
+    polisher = Polisher(lambda ev: None, call=fake_call)
+    polisher.submit({
+        "t": "asr_final", "utt_id": "u1", "start_ms": 0, "end_ms": 1000,
+        "raw_text": "改好了", "turn_confirmed_text": "这是当前段的完整上文",
+    })
+    polisher.close(timeout=5)
+
+    assert "这是当前段的完整上文" in prompts[0]
+
+
+def test_target_sentence_is_removed_from_turn_context():
+    prompts = []
+
+    def fake_call(prompt):
+        prompts.append(prompt)
+        return '{"polished": "改好了。"}'
+
+    polisher = Polisher(lambda ev: None, call=fake_call)
+    polisher.submit({
+        "t": "asr_final", "utt_id": "u1", "start_ms": 0, "end_ms": 3000,
+        "raw_text": "改好了", "turn_confirmed_text": "上文内容，改好了",
+    })
+    polisher.close(timeout=5)
+
+    assert "上文内容" in prompts[0]
+    assert prompts[0].count("改好了") == 1, "当前句只能出现在待纠错区，不能再作为上文"
+
+
+def test_failed_or_rejected_result_is_not_used_as_context():
+    prompts = []
+
+    def fake_call(prompt):
+        prompts.append(prompt)
+        if len(prompts) == 1:
+            return '{"polished":"完全不同的另一句话很长很长很长很长很长很长很长很长很长"}'
+        return '{"polished":"第二句改好了。"}'
+
+    polisher = Polisher(lambda ev: None, call=fake_call)
+    polisher.submit(_event(uid="u1", raw="第一句内容"))
+    polisher.submit(_event(uid="u2", raw="第二句内容"))
+    polisher.close(timeout=5)
+
+    assert "完全不同的另一句话" not in prompts[1], "被驳回的候选不得进入上文"
+
+
+def test_confident_context_is_preferred_over_turn_context():
+    prompts = []
+
+    def fake_call(prompt):
+        prompts.append(prompt)
+        return '{"polished":"第一句改好了。"}'
+
+    polisher = Polisher(lambda ev: None, call=fake_call)
+    polisher.submit(_event(uid="u1", raw="第一句内容"))
+    polisher.submit({
+        "t": "asr_final", "utt_id": "u2", "start_ms": 2000, "end_ms": 4000,
+        "raw_text": "第二句内容", "turn_confirmed_text": "脏的原始上文，第二句内容",
+    })
+    polisher.close(timeout=5)
+
+    assert "第一句改好了" in prompts[1]
+    assert "脏的原始上文" not in prompts[1], "有高置信度上文时不得退回原始 turn 文本"
 
 
 def test_submit_is_non_blocking_and_preserves_order():
