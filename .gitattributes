@@ -1,0 +1,15 @@
+* text=auto
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.pt binary
+*.pth binary
+*.bin binary
+*.npy binary
+*.npz binary
+*.wav binary
+*.flac binary
+*.mp3 binary

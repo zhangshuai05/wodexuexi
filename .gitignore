@@ -1,0 +1,48 @@
+# Python / test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest*
+
+# Runtime outputs and logs
+output/
+**/output/
+*.log
+.superpowers/
+
+# Audio / models / data (kept outside the repo)
+*.wav
+*.flac
+*.mp3
+*.m4a
+models/
+models.json
+checkpoints/
+*.bin
+*.pth
+*.ckpt
+*.onnx
+*.npy
+*.npz
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+
+# Editor / local tool state
+.vscode/
+.claude/
+.idea/
+
+# Upstream experiment/data dirs (not vendored)
+diarization_cl-main/not_mind/
+diarization_cl-main/artifacts/
+diarization_cl-main/archive/
+diarization_cl-main/web/
+diarization_cl-main/v12_meeting/
+diarization_cl-main/dsh_line/
+diarization_cl-main/eval_dsh/
+diarization_cl-main/evidence/
+diarization_cl-main/vendor_pkgs/
