@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
+import hashlib
 
 import pytest
 
@@ -100,3 +101,18 @@ def test_upstream_fingerprint_survives_unreadable_file(monkeypatch):
 
     assert target_name in drift
     assert drift[target_name].startswith("unreadable:"), drift[target_name]
+
+
+def test_upstream_fingerprint_accepts_lf_baseline_for_crlf_file(monkeypatch, tmp_path):
+    normalized = b"line one\nline two\n"
+    target = tmp_path / ".zhang" / "offline_diarizer.py"
+    target.parent.mkdir()
+    target.write_bytes(normalized.replace(b"\n", b"\r\n"))
+    monkeypatch.setattr(bootstrap, "REPO", tmp_path)
+    monkeypatch.setattr(
+        bootstrap,
+        "BASELINE",
+        {"offline_diarizer.py": (hashlib.sha256(normalized).hexdigest()[:16], len(normalized))},
+    )
+
+    assert bootstrap.upstream_fingerprint() == {}

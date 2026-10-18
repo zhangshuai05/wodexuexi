@@ -44,10 +44,14 @@ from run_der import load_models  # noqa: E402
 
 CHUNK_S, STEP_S = 1.5, 0.75        # 3D-Speaker 的配方
 MIN_CHUNK = 0.40
-MAX_K = 15                          # 3D-Speaker: max_num_spks=15
+MAX_K = 8                           # 会议场景默认上限，避免阵列波束变化造成过分割
 MIN_K = 1
-KNN_K = 8                           # k-NN 稀疏化的邻居数
+KNN_K = 8                           # k-NN 稀疏化的邻居数下限
+KNN_RATIO = 0.15                    # 长会议按样本规模增加邻居数，减少长独白图断裂
+KNN_MAX = 32
 SPECTRAL_SEED = 42
+DEFAULT_MERGE_COS_TH = 0.58
+DEFAULT_MIN_CLUSTER_SIZE = 3
 
 # 密集窗身份复核（2026-10-18）：class-chunk 的 1.5s 长窗塞不进 <1.5s 的短插话，
 # 短插话说话人可能整段缺席，eigengap 只能选更小的 K（smoke_clip_180s 实测 3 人，
@@ -114,30 +118,124 @@ def embed_chunks(model, audio, rate, wins):
     return (np.stack(vecs) if vecs else np.empty((0, 0), np.float32)), kept
 
 
-def eigengap_k(eigenvalues, max_k=MAX_K):
-    """最大特征间隙定 K（谱聚类标准做法）。"""
-    vals = np.sort(eigenvalues)[: max_k + 1]
+def eigengap_k(eigenvalues, min_k=MIN_K, max_k=MAX_K):
+    """用低特征值区的电导加权 eigengap 估计说话人数。"""
+    vals = np.maximum(0.0, np.sort(np.asarray(eigenvalues))[: max_k + 1])
     gaps = np.diff(vals)
     if not len(gaps):
-        return 1
-    return int(np.argmax(gaps) + 1)
+        return max(1, int(min_k))
+    lo = max(1, int(min_k))
+    hi = min(len(gaps), int(max_k))
+    if lo > hi:
+        return lo
+    weighted = gaps[lo - 1:hi] / (vals[lo - 1:hi] + 0.15)
+    return int(np.argmax(weighted) + lo)
 
 
-def spectral_cluster(E, n_clusters=None, knn_k=KNN_K):
-    """归一化谱聚类 + k-NN 稀疏化（纯 scipy，不引 sklearn）。
+def compact_labels(labels):
+    """按首次出现顺序压缩标签，消除合并后的编号空洞。"""
+    labels = np.asarray(labels, dtype=int)
+    if not len(labels):
+        return labels
+    remap = {}
+    out = np.empty_like(labels)
+    for i, label in enumerate(labels.tolist()):
+        if label not in remap:
+            remap[label] = len(remap)
+        out[i] = remap[label]
+    return out
 
-    亲和矩阵用 k-NN 截断而非全局 p-percentile：全局阈值在簇大小不均时
-    会把两个簇"搭桥"连通（这正是 K 塌陷的常见机制）。
-    """
+
+def merge_similar_clusters(E, labels, *, merge_cos_th=DEFAULT_MERGE_COS_TH,
+                           min_cluster_size=DEFAULT_MIN_CLUSTER_SIZE,
+                           min_k=MIN_K):
+    """吸收孤立微簇，再按质心余弦合并相似簇并压缩标签。"""
+    E = np.asarray(E, dtype=np.float32)
+    labels = compact_labels(labels).copy()
+    if len(E) != len(labels):
+        raise ValueError("embeddings 与 labels 长度不一致")
+    if not len(labels):
+        return labels, 0
+
+    min_k = max(1, int(min_k))
+    if len(set(labels.tolist())) <= min_k:
+        return labels, len(set(labels.tolist()))
+
+    # 每轮重算簇标签和簇大小，避免压缩编号后继续操作旧标签。
+    while len(set(labels.tolist())) > min_k:
+        unique = sorted(set(labels.tolist()))
+        counts = {label: int(np.sum(labels == label)) for label in unique}
+        valid = [label for label in unique if counts[label] >= min_cluster_size]
+        small = [label for label in unique if counts[label] < min_cluster_size]
+        if not small:
+            break
+        small_label = min(small, key=lambda label: (counts[label], label))
+        small_center = _norm(E[labels == small_label].mean(axis=0))
+        # 若所有簇都很小，先把最小簇并到最近的其他簇；后续轮次继续
+        # 清理，直到簇数到达 min_k 或出现可接收微簇的有效簇。
+        targets = valid or [label for label in unique if label != small_label]
+        centers = np.stack([_norm(E[labels == label].mean(axis=0)) for label in targets])
+        target = targets[int(np.argmax(centers @ small_center))]
+        labels[labels == small_label] = target
+
+    if merge_cos_th and merge_cos_th > 0:
+        while len(set(labels.tolist())) > min_k:
+            unique = sorted(set(labels.tolist()))
+            centers = np.stack([_norm(E[labels == label].mean(axis=0)) for label in unique])
+            similarity = centers @ centers.T
+            np.fill_diagonal(similarity, -1.0)
+            left, right = np.unravel_index(int(np.argmax(similarity)), similarity.shape)
+            if float(similarity[left, right]) < merge_cos_th:
+                break
+            keep, drop = sorted((unique[left], unique[right]))
+            labels[labels == drop] = keep
+
+    labels = compact_labels(labels)
+    return labels, len(set(labels.tolist()))
+
+
+def spectral_cluster(E, n_clusters=None, knn_k=KNN_K, *, min_speakers=None,
+                     max_speakers=None, merge_cos_th=DEFAULT_MERGE_COS_TH,
+                     min_cluster_size=DEFAULT_MIN_CLUSTER_SIZE):
+    """归一化谱聚类、自适应 k-NN、电导加权 eigengap 与质心合并。"""
     from scipy.cluster.vq import kmeans2
     from scipy.linalg import eigh
 
+    E = np.asarray(E, dtype=np.float32)
     n = len(E)
+    if n_clusters is not None:
+        n_clusters = int(n_clusters)
+        if n_clusters < 1:
+            raise ValueError("精确说话人数必须为正整数")
+        if n_clusters > n:
+            raise ValueError("精确说话人数不能大于有效嵌入数")
+    if n == 0:
+        if min_speakers is not None:
+            raise ValueError("min_speakers 大于可用的有效嵌入数")
+        return np.zeros(0, dtype=int), 1, np.array([0.0])
+    min_k = max(MIN_K, int(min_speakers)) if min_speakers is not None else MIN_K
+    max_k = int(max_speakers) if max_speakers is not None else MAX_K
+    if n_clusters is not None:
+        min_k = max_k = n_clusters
+    else:
+        if min_k > max_k:
+            raise ValueError("min_speakers 不能大于 max_speakers")
+        if min_k > n:
+            raise ValueError("min_speakers 大于可用的有效嵌入数")
     if n < 3:
+        small_k = n_clusters if n_clusters is not None else min_k
+        if small_k == n:
+            return np.arange(n, dtype=int), n, np.array([0.0])
         return np.zeros(n, dtype=int), 1, np.array([0.0])
+
+    if n_clusters is None:
+        if min_k > n - 1:
+            raise ValueError("min_speakers 大于可用的有效嵌入数")
+        max_k = min(max_k, n - 1)
     S = np.clip(E @ E.T, 0.0, None)
     np.fill_diagonal(S, 0.0)
-    k = min(knn_k, n - 1)
+    adaptive_k = max(int(knn_k), min(KNN_MAX, int(round(n * KNN_RATIO))))
+    k = max(1, min(adaptive_k, n - 1))
     W = np.zeros_like(S)
     for i in range(n):
         idx = np.argpartition(S[i], -k)[-k:]
@@ -147,8 +245,8 @@ def spectral_cluster(E, n_clusters=None, knn_k=KNN_K):
     dinv = 1.0 / np.sqrt(np.maximum(deg, 1e-9))
     L = np.eye(n) - (W * dinv[:, None]) * dinv[None, :]
     vals, vecs = eigh(L)
-    k_auto = max(MIN_K, min(eigengap_k(vals), MAX_K, n - 1))
-    k_use = n_clusters if n_clusters else k_auto
+    k_auto = max(min_k, min(eigengap_k(vals, min_k=min_k, max_k=max_k), max_k, n - 1))
+    k_use = n_clusters if n_clusters is not None else k_auto
     U = vecs[:, :k_use]
     U = U / (np.linalg.norm(U, axis=1, keepdims=True) + 1e-9)
     try:
@@ -158,7 +256,16 @@ def spectral_cluster(E, n_clusters=None, knn_k=KNN_K):
         print("  [cluster] kmeans2 失败（%s: %s），退回 round-robin 标签，"
               "本次结果不可信" % (type(exc).__name__, str(exc)[:80]), flush=True)
         labels = np.arange(n) % k_use
-    return labels.astype(int), k_use, vals[: MAX_K + 1]
+    labels = compact_labels(labels.astype(int))
+    # 已知人数时禁止后处理再合并，否则显式人数约束会被静默改小。
+    effective_merge_th = 0.0 if n_clusters is not None else merge_cos_th
+    labels, k_final = merge_similar_clusters(
+        E, labels, merge_cos_th=effective_merge_th,
+        min_cluster_size=min_cluster_size, min_k=k_use if n_clusters is not None else min_k,
+    )
+    if n_clusters is not None and k_final != n_clusters:
+        raise ValueError(f"无法得到指定的 {n_clusters} 个非空簇，实际为 {k_final}")
+    return labels.astype(int), k_final, vals[: max(MAX_K, max_k) + 1]
 
 
 def dense_identity_estimate(E, max_windows=DENSE_MAX_WINDOWS,
@@ -185,7 +292,7 @@ def dense_identity_estimate(E, max_windows=DENSE_MAX_WINDOWS,
         return None
 
     candidates = []
-    for k in range(2, min(max_speakers, len(sub)) + 1):
+    for k in range(2, min(max_speakers, len(sub) - 1) + 1):
         labels, _, _ = spectral_cluster(sub, k)
         present = sorted({int(x) for x in labels.tolist()})
         sizes = [int((labels == x).sum()) for x in present]
@@ -531,6 +638,14 @@ def main():
                     help=">0 时把弱音峰值提拉到该值再跑 VAD（只提拉不衰减）。"
                          "实测 VAD 对绝对电平敏感：R8008_M8013 peak=0.26 时"
                          "语音覆盖仅 24%，归一化到 0.85 后升到 51%（2026-10-17）")
+    ap.add_argument("--num-speakers", type=int, default=None,
+                    help="指定已知说话人数，关闭自动人数估计与合并")
+    ap.add_argument("--min-speakers", type=int, default=None,
+                    help="自动估计时的说话人数下限")
+    ap.add_argument("--max-speakers", type=int, default=None,
+                    help="自动估计时的说话人数上限（默认 MAX_K=%d）" % MAX_K)
+    ap.add_argument("--merge-cos-th", type=float, default=DEFAULT_MERGE_COS_TH,
+                    help="聚类质心余弦合并阈值（默认 %.2f）" % DEFAULT_MERGE_COS_TH)
     ap.add_argument("--refine-confine", action="store_true",
                     help="困境六验证：细化窗只保留完整落在 class 区间内的，"
                          "排除跨边界（窗内两人）的污染窗")
@@ -585,8 +700,15 @@ def main():
         E, kept = embed_chunks(models["spk"], audio, rate, wins)
         true_k = len({t["speaker"] for t in turns})
 
-        labels_auto, k_auto, eigs = spectral_cluster(E, None)
-        labels_true, _, _ = spectral_cluster(E, min(true_k, len(E) - 1))
+        labels_auto, k_auto, eigs = spectral_cluster(
+            E,
+            args.num_speakers,
+            min_speakers=args.min_speakers,
+            max_speakers=args.max_speakers,
+            merge_cos_th=args.merge_cos_th,
+        )
+        forced_true_k = max(1, min(true_k, len(E) - 1))
+        labels_true, _, _ = spectral_cluster(E, forced_true_k, merge_cos_th=0.0)
         r_auto = chunks_to_turns(kept, labels_auto, turns)
         r_true = chunks_to_turns(kept, labels_true, turns)
         # 同一份嵌入换聚类，把"聚类算法的差"与"chunk 切分的差"分开
@@ -674,7 +796,11 @@ def main():
         RESULTS.mkdir(parents=True, exist_ok=True)
         (RESULTS / args.out).write_text(
             json.dumps({"config": {"chunk_s": CHUNK_S, "step_s": STEP_S,
-                                   "knn_k": KNN_K, "max_k": MAX_K,
+                                    "knn_k": KNN_K, "knn_ratio": KNN_RATIO,
+                                    "max_k": (args.max_speakers or MAX_K),
+                                    "num_speakers": args.num_speakers,
+                                    "min_speakers": args.min_speakers,
+                                    "merge_cos_th": args.merge_cos_th,
                                    "arm": args.arm, "post": args.post,
                                    "normalize_peak": args.normalize_peak,
                                    "refine_confine": args.refine_confine,

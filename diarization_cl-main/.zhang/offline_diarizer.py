@@ -44,10 +44,17 @@ OSD_ONNX = Path(os.environ.get("DIAR_OSD_ONNX",
 # 0 = 关闭。阈值参考 HANDOFF_1015 §8 的 --normalize-peak 0.85 实验。
 DEFAULT_NORMALIZE_PEAK = 0.85
 
-# 句内切分：主标签之外的连续片段至少这么长，才认定为"稳定的第二说话人"。
-MIN_SUBTURN_S = 1.0
-# segments 里可见片段的最短长度（更短的抖动不输出）。
-MIN_SEGMENT_S = 0.3
+# 句内切分门控：避免普通短句被切成词中两段。
+MIN_SUBTURN_S = float(os.environ.get("DIAR_MIN_SUBTURN_S", "2.5"))
+MIN_SEGMENT_S = float(os.environ.get("DIAR_MIN_SEGMENT_S", "0.5"))
+MIN_SPLITTABLE_TURN_S = float(os.environ.get("DIAR_MIN_SPLITTABLE_TURN_S", "4.5"))
+MIN_MAIN_REMAINDER_S = float(os.environ.get("DIAR_MIN_MAIN_REMAINDER_S", "1.2"))
+SUBTURN_MIN_MARGIN = float(os.environ.get("DIAR_SUBTURN_MIN_MARGIN", "0.08"))
+
+DEFAULT_MERGE_COS_TH = float(os.environ.get("DIAR_MERGE_COS_TH", "0.58"))
+ISLAND_MAX_DUR_S = float(os.environ.get("DIAR_ISLAND_MAX_DUR_S", "3.0"))
+ISLAND_MAX_GAP_S = float(os.environ.get("DIAR_ISLAND_MAX_GAP_S", "3.5"))
+HYSTERESIS_MARGIN = float(os.environ.get("DIAR_HYSTERESIS_MARGIN", "0.10"))
 
 
 def _normalize_audio(audio: np.ndarray, rate: int, target_peak: float):
@@ -69,78 +76,214 @@ def _normalize_audio(audio: np.ndarray, rate: int, target_peak: float):
     return scaled, path
 
 
-def _refined_turn_segments(turns, windows, labels, main_labels, hop_s,
-                           min_subturn_s, min_segment_s):
-    """细化短窗 -> 句内时间片。
+def _turn_embedding_scores(
+    turns: List[Dict],
+    win_spans: List[tuple],
+    win_embeds: np.ndarray,
+    anchors: np.ndarray,
+    anchor_labels: List[int],
+) -> np.ndarray:
+    """按窗与 turn 的重叠时长，计算每句对各说话人质心的平均余弦分数。"""
+    scores = np.zeros((len(turns), len(anchor_labels)), dtype=np.float32)
+    if not turns or not anchor_labels or not len(win_spans) or not len(win_embeds):
+        return scores
+    if len(win_spans) != len(win_embeds):
+        raise ValueError("声纹嵌入数与长窗数不一致")
+    win_norm = win_embeds / (np.linalg.norm(win_embeds, axis=1, keepdims=True) + 1e-9)
+    anchor_norm = anchors / (np.linalg.norm(anchors, axis=1, keepdims=True) + 1e-9)
+    similarities = win_norm @ anchor_norm.T
+    for i, turn in enumerate(turns):
+        total = 0.0
+        weighted = np.zeros(len(anchor_labels), dtype=np.float64)
+        for j, (start, end) in enumerate(win_spans):
+            overlap = min(float(end), turn["end"]) - max(float(start), turn["start"])
+            if overlap > 0:
+                weighted += overlap * similarities[j]
+                total += overlap
+        if total:
+            scores[i] = (weighted / total).astype(np.float32)
+    return scores
 
-    把与句子有重叠的短窗按时间排序，连续同标签（窗起点间隔 <= 1.5*hop）
-    合并成 run；run 边界取相邻窗起点中点 + hop/2（与 v12._segment_windows
-    同口径），再裁到句子边界。短于 min_segment_s 的片段丢弃。
 
-    返回 (segments, sub_turns)：
-      segments  每句的完整时间片（含主说话人），供下游切 Turn；
-      sub_turns 只含非主说话人且 >= min_subturn_s 的稳定片段。
-    """
-    segments, sub_turns = {}, {}
-    label_list = labels.tolist()
-    for turn, main in zip(turns, main_labels):
-        main = int(main)
-        if main == -1:                       # 整场无窗哨兵，没有可切分的短窗
+def _smooth_turn_speakers(
+    turns: List[Dict],
+    pred: List[int],
+    turn_scores: Optional[np.ndarray],
+    anchor_labels: List[int],
+    *,
+    island_max_dur_s: float = ISLAND_MAX_DUR_S,
+    island_max_gap_s: float = ISLAND_MAX_GAP_S,
+    hysteresis_margin: float = HYSTERESIS_MARGIN,
+) -> List[int]:
+    """用迟滞规则吸收长独白中置信度不足的短说话人孤岛。"""
+    out = list(pred)
+    if len(out) < 2:
+        return out
+    label_to_col = {int(label): i for i, label in enumerate(anchor_labels)}
+
+    def margin(i: int, current: int, target: int) -> float:
+        if (turn_scores is None or i >= len(turn_scores)
+                or current not in label_to_col or target not in label_to_col):
+            return float("inf")
+        row = turn_scores[i]
+        if not np.all(np.isfinite(row)) or not np.any(row):
+            # 无长窗覆盖时没有声纹证据；保留 fallback 投票给出的身份。
+            return float("inf")
+        return float(row[label_to_col[current]] - row[label_to_col[target]])
+
+    # 一句夹心：A -> B -> A。
+    for i in range(1, len(out) - 1):
+        prev, current, nxt = out[i - 1], out[i], out[i + 1]
+        if prev < 0 or current == prev or nxt != prev:
             continue
+        duration = float(turns[i]["end"]) - float(turns[i]["start"])
+        left_gap = float(turns[i]["start"]) - float(turns[i - 1]["end"])
+        right_gap = float(turns[i + 1]["start"]) - float(turns[i]["end"])
+        if (duration <= island_max_dur_s and left_gap <= island_max_gap_s
+                and right_gap <= island_max_gap_s
+                and margin(i, current, prev) < hysteresis_margin):
+            out[i] = prev
+
+    # 两句夹心：A -> B/C -> A；合计时长必须仍处在短孤岛范围内。
+    for i in range(1, len(out) - 2):
+        prev, nxt = out[i - 1], out[i + 2]
+        if prev < 0 or nxt != prev or (out[i] == prev and out[i + 1] == prev):
+            continue
+        duration = float(turns[i + 1]["end"]) - float(turns[i]["start"])
+        left_gap = float(turns[i]["start"]) - float(turns[i - 1]["end"])
+        right_gap = float(turns[i + 2]["start"]) - float(turns[i + 1]["end"])
+        if (duration <= island_max_dur_s and left_gap <= island_max_gap_s
+                and right_gap <= island_max_gap_s
+                and max(margin(i, out[i], prev), margin(i + 1, out[i + 1], prev))
+                < hysteresis_margin):
+            out[i] = out[i + 1] = prev
+
+    # 极短句紧邻上一句时，只有声纹优势足够大才确认换人。
+    for i in range(1, len(out)):
+        prev, current = out[i - 1], out[i]
+        if prev < 0 or current < 0 or current == prev:
+            continue
+        duration = float(turns[i]["end"]) - float(turns[i]["start"])
+        gap = float(turns[i]["start"]) - float(turns[i - 1]["end"])
+        if (duration <= 1.5 and gap <= 1.5
+                and margin(i, current, prev) < hysteresis_margin * 0.8):
+            out[i] = prev
+    return out
+
+
+def _refined_turn_segments(turns, windows, labels, main_labels, hop_s,
+                           min_subturn_s, min_segment_s, *, rE=None,
+                           anchors=None, anchor_labels=None,
+                           min_splittable_turn_s=MIN_SPLITTABLE_TURN_S,
+                           min_main_remainder_s=MIN_MAIN_REMAINDER_S,
+                           subturn_min_margin=SUBTURN_MIN_MARGIN,
+                           enable_subturns=True):
+    """细化短窗转成句内片段；只有长句中的稳定、高置信度换人进入 sub_turns。"""
+    segments, sub_turns = {}, {}
+    if len(windows) != len(labels):
+        raise ValueError("细化短窗数与标签数不一致")
+    label_list = np.asarray(labels, dtype=int).tolist()
+    label_values = [] if anchor_labels is None else anchor_labels
+    label_to_col = {int(label): i for i, label in enumerate(label_values)}
+    win_sims = None
+    if (rE is not None and anchors is not None and len(rE) == len(windows)
+            and len(anchors)):
+        r_norm = rE / (np.linalg.norm(rE, axis=1, keepdims=True) + 1e-9)
+        a_norm = anchors / (np.linalg.norm(anchors, axis=1, keepdims=True) + 1e-9)
+        win_sims = r_norm @ a_norm.T
+
+    for turn, main_raw in zip(turns, main_labels):
+        main = int(main_raw)
+        if main < 0:
+            continue
+        turn_start, turn_end = float(turn["start"]), float(turn["end"])
+        if not enable_subturns or turn_end - turn_start < min_splittable_turn_s:
+            segments[turn["utt_id"]] = [{
+                "start_ms": int(round(turn_start * 1000)),
+                "end_ms": int(round(turn_end * 1000)),
+                "speaker": "Speaker_%d" % (main + 1),
+                "is_main": True,
+            }]
+            continue
+
         picked = []
-        for (a, b), lab in zip(windows, label_list):
-            s = max(float(a), turn["start"])
-            e = min(float(b), turn["end"])
-            if e - s <= 1e-6:
-                continue
-            picked.append((float(a), float(b), int(lab)))
+        for idx, ((a, b), label) in enumerate(zip(windows, label_list)):
+            if min(float(b), turn_end) - max(float(a), turn_start) > 1e-6:
+                picked.append((float(a), float(b), label, idx))
         if not picked:
             continue
-        picked.sort(key=lambda item: item[0])
+        picked.sort(key=lambda row: row[0])
 
         runs = []
-        for idx, (a, b, lab) in enumerate(picked):
-            if (runs and runs[-1]["label"] == lab
+        for idx, (a, b, label, win_idx) in enumerate(picked):
+            if (runs and runs[-1]["label"] == label
                     and a - picked[idx - 1][0] <= hop_s * 1.5 + 1e-9):
                 runs[-1]["last_start"] = a
                 runs[-1]["end"] = max(runs[-1]["end"], b)
+                runs[-1]["indices"].append(win_idx)
             else:
-                runs.append({"label": lab, "first_start": a,
-                             "last_start": a, "end": b})
+                runs.append({"label": label, "first_start": a, "last_start": a,
+                             "end": b, "indices": [win_idx]})
+
+        # 若短窗对异类质心的平均余弦优势不足，先归并回主说话人，再合并相邻段。
+        if win_sims is not None and main in label_to_col:
+            for run in runs:
+                label = run["label"]
+                if label == main or label not in label_to_col:
+                    continue
+                idxs = run["indices"]
+                sub_score = float(np.mean(win_sims[idxs, label_to_col[label]]))
+                main_score = float(np.mean(win_sims[idxs, label_to_col[main]]))
+                if sub_score - main_score < subturn_min_margin:
+                    run["label"] = main
+
+        merged = []
+        for run in runs:
+            if merged and merged[-1]["label"] == run["label"]:
+                merged[-1]["last_start"] = run["last_start"]
+                merged[-1]["end"] = max(merged[-1]["end"], run["end"])
+                merged[-1]["indices"].extend(run["indices"])
+            else:
+                merged.append(run)
 
         pieces = []
-        for idx, run in enumerate(runs):
-            start = max(turn["start"], run["first_start"])
-            end = min(turn["end"], run["end"])
+        for idx, run in enumerate(merged):
+            start = max(turn_start, run["first_start"])
+            end = min(turn_end, run["end"])
             if idx > 0:
-                prev = runs[idx - 1]
+                prev = merged[idx - 1]
                 start = max(start, (prev["last_start"] + run["first_start"]) / 2.0
                             + hop_s / 2.0)
-            if idx + 1 < len(runs):
-                nxt = runs[idx + 1]
+            if idx + 1 < len(merged):
+                nxt = merged[idx + 1]
                 end = min(end, (run["last_start"] + nxt["first_start"]) / 2.0
                           + hop_s / 2.0)
-            if end - start < min_segment_s:
-                continue
-            pieces.append({"start_ms": int(round(start * 1000)),
-                           "end_ms": int(round(end * 1000)),
-                           "speaker": "Speaker_%d" % (run["label"] + 1),
-                           "is_main": run["label"] == main,
-                           "_dur": end - start})
+            if end - start >= min_segment_s:
+                pieces.append({
+                    "start_ms": int(round(start * 1000)),
+                    "end_ms": int(round(end * 1000)),
+                    "speaker": "Speaker_%d" % (run["label"] + 1),
+                    "is_main": run["label"] == main,
+                    "_dur": end - start,
+                })
         if not pieces:
             continue
-        if not any(p["is_main"] for p in pieces):
-            max(pieces, key=lambda p: p["_dur"])["is_main"] = True
+        if not any(piece["is_main"] for piece in pieces):
+            max(pieces, key=lambda piece: piece["_dur"])["is_main"] = True
+        main_duration = sum(piece["_dur"] for piece in pieces if piece["is_main"])
         for piece in pieces:
             piece.pop("_dur", None)
         segments[turn["utt_id"]] = pieces
-        subs = [{"start_ms": p["start_ms"], "end_ms": p["end_ms"],
-                 "speaker": p["speaker"]}
-                for p in pieces
-                if (not p["is_main"]
-                    and p["end_ms"] - p["start_ms"] >= int(round(min_subturn_s * 1000)))]
-        if subs:
-            sub_turns[turn["utt_id"]] = subs
+
+        if main_duration < min_main_remainder_s:
+            continue
+        stable_subs = [{
+            "start_ms": piece["start_ms"], "end_ms": piece["end_ms"],
+            "speaker": piece["speaker"],
+        } for piece in pieces if (not piece["is_main"]
+             and piece["end_ms"] - piece["start_ms"] >= int(round(min_subturn_s * 1000)))]
+        if stable_subs:
+            sub_turns[turn["utt_id"]] = stable_subs
     return segments, sub_turns
 
 
@@ -155,6 +298,24 @@ def _osd_chunk_windows(audio: np.ndarray, wins_vad):
     return class_chunks(probs_all[mask_all], fs)[0], "class"
 
 
+def _env_int(name: str) -> Optional[int]:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _env_bool(name: str, default: bool = True) -> bool:
+    value = os.environ.get(name, "").strip().lower()
+    if not value:
+        return default
+    return value not in ("0", "false", "no", "off")
+
+
 def backfill_speakers(
     wav_path: str,
     utterances: List[Dict],
@@ -162,6 +323,12 @@ def backfill_speakers(
     mode: str = "auto",
     normalize_peak: float = DEFAULT_NORMALIZE_PEAK,
     with_segments: bool = False,
+    *,
+    num_speakers: Optional[int] = None,
+    min_speakers: Optional[int] = None,
+    max_speakers: Optional[int] = None,
+    merge_cos_th: float = DEFAULT_MERGE_COS_TH,
+    enable_subturns: Optional[bool] = None,
 ) -> Dict:
     """整场音频 + 流式阶段锁死的句子 -> {utt_id: "Speaker_N"}。
 
@@ -181,7 +348,13 @@ def backfill_speakers(
       segments   {utt_id: [{"start_ms", "end_ms", "speaker", "is_main"}, ...]}
                  细化层给出的句内时间片（0.6s/0.15s 短窗合并），供下游切 Turn。
       sub_turns  {utt_id: [{"start_ms", "end_ms", "speaker"}, ...]}
-                 仅非主说话人且持续 >= MIN_SUBTURN_S（1.0s）的稳定片段。
+                 仅长句中持续 >= MIN_SUBTURN_S 且声纹优势足够的稳定片段。
+
+    num_speakers: 已知现场人数时锁定精确簇数；也可用 DIAR_NUM_SPEAKERS 设置。
+    min_speakers / max_speakers: 自动人数估计的范围约束。
+    merge_cos_th: 同一说话人被分裂时的质心合并阈值（默认 0.58）。
+    enable_subturns: 是否允许回传稳定的句内换人；默认 True，可用
+                      DIAR_ENABLE_SUBTURNS=0 关闭。
     """
     from run_3dspeaker_pipeline import (DENSE_RESCUE_ENABLED, chunk_windows,
                                         dense_identity_estimate, embed_chunks,
@@ -192,7 +365,24 @@ def backfill_speakers(
     if mode not in ("auto", "class", "vad"):
         raise ValueError(f"mode 只支持 auto/class/vad，收到 {mode!r}")
     if not utterances:
-        return {}
+        return {} if not with_segments else {"mapping": {}, "segments": {}, "sub_turns": {}}
+
+    if num_speakers is None:
+        num_speakers = _env_int("DIAR_NUM_SPEAKERS")
+    if min_speakers is None:
+        min_speakers = _env_int("DIAR_MIN_SPEAKERS")
+    if max_speakers is None:
+        max_speakers = _env_int("DIAR_MAX_SPEAKERS")
+    if enable_subturns is None:
+        enable_subturns = _env_bool("DIAR_ENABLE_SUBTURNS", default=True)
+    for name, value in (("num_speakers", num_speakers),
+                        ("min_speakers", min_speakers),
+                        ("max_speakers", max_speakers)):
+        if value is not None and int(value) < 1:
+            raise ValueError(f"{name} 必须为正整数")
+    if min_speakers is not None and max_speakers is not None \
+            and min_speakers > max_speakers:
+        raise ValueError("min_speakers 不能大于 max_speakers")
 
     if models is None:
         from run_der import load_models
@@ -228,19 +418,38 @@ def backfill_speakers(
             print("[diarizer] 未找到 OSD（%s），本次退化为纯 VAD 切窗" % OSD_ONNX,
                   flush=True)
     if not wins:
-        return {u["utt_id"]: "Speaker_1" for u in utterances}
+        # Even the no-voice fallback must honor explicit speaker bounds.
+        spectral_cluster(np.empty((0, 0), dtype=np.float32), num_speakers,
+                         min_speakers=min_speakers, max_speakers=max_speakers)
+        default_map = {u["utt_id"]: "Speaker_1" for u in utterances}
+        return default_map if not with_segments else {
+            "mapping": default_map, "segments": {}, "sub_turns": {}
+        }
 
     E, kept = embed_chunks(models["spk"], audio, rate, wins)
     if len(E) == 0:
-        return {u["utt_id"]: "Speaker_1" for u in utterances}
+        spectral_cluster(np.empty((0, 0), dtype=np.float32), num_speakers,
+                         min_speakers=min_speakers, max_speakers=max_speakers)
+        default_map = {u["utt_id"]: "Speaker_1" for u in utterances}
+        return default_map if not with_segments else {
+            "mapping": default_map, "segments": {}, "sub_turns": {}
+        }
 
-    labels, k, _ = spectral_cluster(E, None)
+    labels, k, _ = spectral_cluster(
+        E,
+        num_speakers,
+        min_speakers=min_speakers,
+        max_speakers=max_speakers,
+        merge_cos_th=merge_cos_th,
+    )
 
     # 细化层：长窗定身份、0.6s 密集窗找边界；没短窗盖住的句子退回长窗（fallback）。
     # 长窗 K 可能漏掉短插话说话人（class-chunk 塞不下 <1.5s 区间），此时用
     # 0.6s 密集窗独立估 K；只有密集窗 K 更大时才接管身份锚点。
     rwins = rlabels = None
     fb_labels = labels
+    anchors = None
+    alabs: List[int] = []
     if k >= 1:
         anchors = v11._centroids(E, labels)
         alabs = sorted({int(x) for x in labels.tolist()})
@@ -249,8 +458,10 @@ def backfill_speakers(
         # 0.6s 短窗方差较大，真实 2 人对有被过切成 3 人的风险；餐饮段
         # （b2d1…）长窗本身就是 3 人/11 切换，不依赖救援。打开时也只在
         # 长窗 K=2、密集窗给出 3 时接管。
+        # An explicit speaker count is a hard constraint; dense rescue may
+        # otherwise replace the requested K anchors with a larger estimate.
         dense = (dense_identity_estimate(rE)
-                 if DENSE_RESCUE_ENABLED and len(rE) else None)
+                 if DENSE_RESCUE_ENABLED and num_speakers is None and len(rE) else None)
         if (DENSE_RESCUE_ENABLED and dense is not None and k == 2
                 and k < dense["k"] <= k + 1):
             anchors = dense["anchors"]
@@ -267,10 +478,15 @@ def backfill_speakers(
         else:
             rwins = [(float(t), float(t) + v12.REFINE_WIN_S) for t in rtimes]
 
+    # 长窗是句级身份主票；短窗只在整句没有长窗覆盖时兜底。
     if rwins is not None:
-        pred, _ = turns_to_speakers(rwins, rlabels, turns, fallback=(kept, fb_labels))
+        pred, _ = turns_to_speakers(kept, fb_labels, turns, fallback=(rwins, rlabels))
     else:
-        pred, _ = turns_to_speakers(kept, labels, turns)
+        pred, _ = turns_to_speakers(kept, fb_labels, turns)
+
+    if anchors is not None and len(alabs) >= 2:
+        turn_scores = _turn_embedding_scores(turns, kept, E, anchors, alabs)
+        pred = _smooth_turn_speakers(turns, pred, turn_scores, alabs)
 
     mapping = {t["utt_id"]: f"Speaker_{int(p) + 1}" for t, p in zip(turns, pred)}
     if not with_segments:
@@ -283,7 +499,13 @@ def backfill_speakers(
         segments, sub_turns = _refined_turn_segments(
             turns, rwins, rlabels, pred,
             hop_s=v12.REFINE_HOP_S,
-            min_subturn_s=MIN_SUBTURN_S, min_segment_s=MIN_SEGMENT_S)
+            min_subturn_s=MIN_SUBTURN_S,
+            min_segment_s=MIN_SEGMENT_S,
+            rE=rE,
+            anchors=anchors,
+            anchor_labels=alabs,
+            enable_subturns=bool(enable_subturns),
+        )
     return {"mapping": mapping, "segments": segments, "sub_turns": sub_turns}
 
 

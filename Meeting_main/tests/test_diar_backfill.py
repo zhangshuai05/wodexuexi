@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
+import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 import bootstrap
@@ -8,6 +10,7 @@ bootstrap.install()
 
 import pytest
 
+import diar_backfill  # noqa: E402
 from diar_backfill import load_utterances, run_backfill, to_contract  # noqa: E402
 from session_store import SessionStore  # noqa: E402
 
@@ -211,3 +214,76 @@ def test_run_backfill_writes_sub_turns_and_expands_session(tmp_path):
         "u1#1", "u1#2", "u1#3"]
     assert [u["spk_label"] for u in session["utterances"]] == [
         "speaker_0", "speaker_1", "speaker_0"]
+
+
+def test_run_backfill_forwards_supported_speaker_options(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript(
+        [{"utt_id": "u1", "start_ms": 0, "end_ms": 100, "raw_text": "你好"}],
+        duration_ms=100,
+    )
+    store.audio_path.write_bytes(b"RIFF")
+    called = {}
+
+    def compatible_callback(wav_path, utterances, models, mode, *, num_speakers=None):
+        called["options"] = {"num_speakers": num_speakers}
+        return {"u1": "Speaker_1"}
+
+    run_backfill(
+        store.dir,
+        backfill=compatible_callback,
+        num_speakers=4,
+        min_speakers=2,
+        max_speakers=6,
+        enable_subturns=False,
+    )
+
+    assert called["options"] == {"num_speakers": 4}
+
+
+def test_run_backfill_keeps_four_argument_callback_compatible_with_options(tmp_path):
+    store = SessionStore(tmp_path / "s_1")
+    store.write_transcript(
+        [{"utt_id": "u1", "start_ms": 0, "end_ms": 100, "raw_text": "你好"}],
+        duration_ms=100,
+    )
+    store.audio_path.write_bytes(b"RIFF")
+    called = {}
+
+    def legacy_callback(wav_path, utterances, models, mode):
+        called["mode"] = mode
+        return {"u1": "Speaker_1"}
+
+    run_backfill(store.dir, backfill=legacy_callback, num_speakers=4)
+
+    assert called["mode"] == "auto"
+
+
+def test_cli_speaker_options_are_forwarded(monkeypatch, tmp_path):
+    (tmp_path / "session_audio.wav").write_bytes(b"RIFF")
+    called = {}
+    monkeypatch.setitem(
+        sys.modules,
+        "web_server",
+        SimpleNamespace(get_models=lambda **kwargs: {"vad": "v", "spk": "s"}),
+    )
+
+    def fake_run_backfill(session_dir, **kwargs):
+        called["kwargs"] = kwargs
+        return {"u1": {"spk_label": "speaker_0"}}
+
+    monkeypatch.setattr(diar_backfill, "run_backfill", fake_run_backfill)
+
+    assert diar_backfill.main([
+        "--session", str(tmp_path), "--force", "--num-speakers", "4",
+        "--min-speakers", "2", "--max-speakers", "6", "--no-subturns",
+    ]) == 0
+    assert called["kwargs"] == {
+        "models": {"vad": "v", "spk": "s"},
+        "mode": "auto",
+        "force": True,
+        "num_speakers": 4,
+        "min_speakers": 2,
+        "max_speakers": 6,
+        "enable_subturns": False,
+    }

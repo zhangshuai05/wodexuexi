@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import re
 import time
@@ -114,11 +115,36 @@ def load_utterances(session_dir: Path) -> List[Dict]:
     return [_normalize_row(row) for row in obj.get("utterances", [])]
 
 
-def _real_backfill(wav_path, utterances, models, mode):
+def _real_backfill(wav_path, utterances, models, mode, *, num_speakers=None,
+                   min_speakers=None, max_speakers=None, enable_subturns=None):
     from offline_diarizer import backfill_speakers
-    # 2026-10-18 上游封板：with_segments=True 返回 sub_turns（句内稳定换人 >=1.0s）
+    # with_segments=True 返回经长句长度、连续时长和声纹优势门控的 sub_turns。
     return backfill_speakers(wav_path, utterances, models=models, mode=mode,
-                             with_segments=True)
+                             with_segments=True,
+                             num_speakers=num_speakers,
+                             min_speakers=min_speakers,
+                             max_speakers=max_speakers,
+                             enable_subturns=enable_subturns)
+
+
+def _supported_options(fn: Callable, options: Dict) -> Dict:
+    """只向支持这些关键字的回调传参，兼容旧的四参数测试回调。"""
+    if not options:
+        return {}
+    try:
+        parameters = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return {}
+    if any(parameter.kind == inspect.Parameter.VAR_KEYWORD
+           for parameter in parameters.values()):
+        return options
+    return {
+        name: value for name, value in options.items()
+        if name in parameters and parameters[name].kind in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        )
+    }
 
 
 def run_backfill(
@@ -128,6 +154,10 @@ def run_backfill(
     mode: str = "auto",
     backfill: Optional[Callable] = None,
     force: bool = False,
+    num_speakers: Optional[int] = None,
+    min_speakers: Optional[int] = None,
+    max_speakers: Optional[int] = None,
+    enable_subturns: Optional[bool] = None,
 ) -> Dict[str, Dict]:
     bootstrap.install()
     from session_store import SessionStore
@@ -148,7 +178,15 @@ def run_backfill(
         return {}
 
     fn = backfill or _real_backfill
-    raw = fn(str(store.audio_path), utterances, models, mode)
+    options = _supported_options(fn, {
+        name: value for name, value in {
+            "num_speakers": num_speakers,
+            "min_speakers": min_speakers,
+            "max_speakers": max_speakers,
+            "enable_subturns": enable_subturns,
+        }.items() if value is not None
+    })
+    raw = fn(str(store.audio_path), utterances, models, mode, **options)
     mapping = to_contract(raw)
 
     if store.read_json("transcript.json") is None and utterances:
@@ -165,6 +203,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--session", required=True, help="session 目录，如 output/sessions/s_xxx")
     parser.add_argument("--mode", default="auto", choices=("auto", "class", "vad"))
     parser.add_argument("--force", action="store_true", help="忽略已有 diarization.json")
+    parser.add_argument("--num-speakers", type=int, default=None,
+                        help="已知现场人数时锁定精确说话人数")
+    parser.add_argument("--min-speakers", type=int, default=None,
+                        help="自动估计时的说话人数下限")
+    parser.add_argument("--max-speakers", type=int, default=None,
+                        help="自动估计时的说话人数上限")
+    parser.add_argument("--no-subturns", action="store_true",
+                        help="禁用句内换人切分")
     args = parser.parse_args(argv)
 
     bootstrap.install()
@@ -187,7 +233,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"[backfill] 模型就绪 {load_seconds:.1f}s", flush=True)
 
     started = time.time()
-    mapping = run_backfill(session_dir, models=models, mode=args.mode, force=args.force)
+    mapping = run_backfill(
+        session_dir,
+        models=models,
+        mode=args.mode,
+        force=args.force,
+        num_speakers=args.num_speakers,
+        min_speakers=args.min_speakers,
+        max_speakers=args.max_speakers,
+        enable_subturns=False if args.no_subturns else None,
+    )
     elapsed = time.time() - started
 
     speakers = sorted({v["spk_label"] for v in mapping.values()})

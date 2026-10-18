@@ -24,13 +24,13 @@ C:\Users\31817\miniconda3\envs\funasr\python.exe -m pytest -q
 C:\Users\31817\miniconda3\envs\funasr\python.exe stream_service.py
 ```
 
-当前基线：**159 passed, 3 deselected**（2026-10-18）。
+当前基线：**179 passed, 3 deselected**（2026-10-19）。
 
 ## 目录
 
 - `Meeting_main/` — 会议流式转写 + 会后定稿（CLI、8736 回放服务、前端、测试）
 - `diarization_cl-main/` — 离线说话人回填、流式底座、AliMeeting 评测
-  （2026-10-18 封板快照，默认只读；见 `diarization_cl-main/VENDORED_UPSTREAM.md`）
+  （2026-10-19 已同步长窗主投票、句间迟滞与句内切分门控；见 `diarization_cl-main/VENDORED_UPSTREAM.md`）
 
 ## 环境
 
@@ -58,9 +58,9 @@ C:\Users\31817\miniconda3\envs\funasr\python.exe stream_service.py
 
 ## 上游快照
 
-`diarization_cl-main/` 是 2026-10-18 封板快照，核心指纹：
+`diarization_cl-main/` 当前同步快照的核心指纹（LF 规范化后）：
 
-- `.zhang/offline_diarizer.py`：`eb454a8bf70d2081`，15061 bytes
+- `.zhang/offline_diarizer.py`：`efed74f75b4f770e`，25333 bytes
 - `.zhang/streaming_asr_engine.py`：`5152424c04f4e572`，15831 bytes
 
 `Meeting_main/bootstrap.py` 按「monorepo 同级 → 项目内 vendored → 旧绝对路径」解析上游。
