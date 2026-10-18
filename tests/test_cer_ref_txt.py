@@ -134,8 +134,45 @@ def test_window_uses_utterances_when_turn_spans_window(tmp_path):
     result = evaluate(d, ref_txt=ref, window=(11000, 19000))
 
     assert result["turns"] == 0
-    assert result["primary_version"] == "final"
-    assert result["versions"]["final"]["cer"] == 0.0
+    assert result["primary_version"] == "final_fallback"
+    assert result["versions"]["final_fallback"]["cer"] == 0.0
+
+
+def test_window_final_fallback_uses_polished_or_raw(tmp_path):
+    d = _session(
+        tmp_path,
+        turns=[{"turn_id": "turn_0001", "text": "你好", "start_ms": 12000,
+                "end_ms": 14000, "spk_label": "speaker_1"}],
+        utterances=[
+            {"utt_id": "u1", "start_ms": 12000, "end_ms": 14000,
+             "final_text": None, "polished_text": "你好", "raw_text": "你好"},
+        ],
+    )
+    ref = tmp_path / "ref.txt"
+    ref.write_text("[00:12.0-00:14.0] speaker_1: 你好\n", encoding="utf-8")
+
+    result = evaluate(d, ref_txt=ref, window=(11000, 19000))
+
+    assert result["primary_version"] == "final_fallback"
+    assert result["versions"]["final"]["cer"] == 1.0
+    assert result["versions"]["final_fallback"]["cer"] == 0.0
+    assert evaluate(d, ref_txt=ref)["textgrid"] is None
+
+
+def test_window_with_no_reference_intervals_reports_empty(tmp_path):
+    d = _session(
+        tmp_path,
+        turns=[{"turn_id": "turn_0001", "text": "你好", "start_ms": 0,
+                "end_ms": 1000, "spk_label": "speaker_1"}],
+    )
+    ref = tmp_path / "ref.txt"
+    ref.write_text("[00:00.0-00:01.0] speaker_1: 你好\n", encoding="utf-8")
+
+    result = evaluate(d, ref_txt=ref, window=(5000, 5500))
+
+    assert result["reference"]["empty_reference"] is True
+    assert result["reference"]["source_timed"] is True
+    assert result["reference"]["timed"] is False
 
 
 def test_evaluate_ref_txt_counts_substitution(tmp_path):

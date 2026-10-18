@@ -592,6 +592,11 @@ def _text_versions(obj: Dict, *,
         for u in utterances
     )
     final_strict = "".join(normalize(u.get("final_text") or "") for u in utterances)
+    final_fallback = "".join(
+        normalize(u.get("final_text") or u.get("polished_text")
+                  or u.get("raw_text") or "")
+        for u in utterances
+    )
     turns = [
         t for t in (obj.get("turns") or [])
         if _in_window(int(t.get("start_ms") or 0),
@@ -602,6 +607,7 @@ def _text_versions(obj: Dict, *,
         "raw": raw,
         "polished": polished,
         "final": final_strict,
+        "final_fallback": final_fallback,
         "turns": turns_text,
     }
 
@@ -623,18 +629,22 @@ def evaluate(
 
     if ref_txt is not None:
         ref_intervals = read_ref_text(ref_txt)
-        if window is not None and not all(item.timed for item in ref_intervals):
+        source_timed = all(item.timed for item in ref_intervals)
+        if window is not None and not source_timed:
             raise ValueError("--window 要求参考行全部带时间戳")
         source = "txt"
     else:
         ref_intervals = reference_intervals(
             textgrid_path, skip_start_ms=skip_start_ms)
+        source_timed = True
         source = "textgrid"
     if window is not None:
         ref_intervals = [
             item for item in ref_intervals
             if _in_window(item.start_ms, item.end_ms, window)
         ]
+    empty_reference = not ref_intervals
+    timed_ref = source_timed and not empty_reference
     ref = "".join(item.text for item in ref_intervals)
 
     utterances_all = obj.get("utterances") or []
@@ -663,8 +673,7 @@ def evaluate(
             legacy_cer=legacy_lcs_cer(ref, hyp) if legacy else None,
         )
 
-    primary_version = "final" if window is not None else "turns"
-    timed_ref = bool(ref_intervals) and all(item.timed for item in ref_intervals)
+    primary_version = "final_fallback" if window is not None else "turns"
     if timed_ref:
         attribution = attribute_edits(
             ref_intervals, texts[primary_version], utt_intervals, pad_ms=pad_ms)
@@ -693,7 +702,7 @@ def evaluate(
 
     return {
         "session": session_dir.name,
-        "textgrid": str(textgrid_path),
+        "textgrid": str(textgrid_path) if textgrid_path else None,
         "skip_start_ms": skip_start_ms,
         "reference": {
             "chars": len(ref),
@@ -701,6 +710,8 @@ def evaluate(
             "ms": raw_cover.ref_ms,
             "filler_chars": sum(1 for ch in ref if ch in "呃嗯额哦"),
             "source": source,
+            "source_timed": source_timed,
+            "empty_reference": empty_reference,
             "timed": timed_ref,
             "textgrid": str(textgrid_path) if textgrid_path else None,
             "ref_txt": str(ref_txt) if ref_txt else None,
@@ -746,7 +757,7 @@ def _print_report(result: Dict) -> None:
         print(f"  window={format_time_ms(start)}-{format_time_ms(end)}")
     if result.get("primary_version"):
         print(f"  主口径={result['primary_version']}")
-    if result["skip_start_ms"]:
+    if result["skip_start_ms"] and ref.get("source") == "textgrid":
         print(f"  （已跳过前 {result['skip_start_ms'] / 1000:.1f}s）")
     if ref.get("filler_chars"):
         print(f"  参考口癖字符（呃/嗯/额/哦）: {ref['filler_chars']}"
@@ -763,12 +774,15 @@ def _print_report(result: Dict) -> None:
             print(f"  {'':9s} legacy difflib/LCS CER={item['legacy_lcs_cer']:.2%}"
                   f"（仅历史对照，不得与新口径混用）")
 
-    if not ref.get("timed", True):
+    if ref.get("empty_reference"):
+        print("  （窗口内没有参考片段：请检查窗口或参考文件）")
+    elif not ref.get("timed", True):
         print("  （参考无时间戳：跳过覆盖率与归因）")
     else:
         attribution = result.get("attribution") or {}
         if attribution:
-            print("  错误归因（turns 口径，按参考区间精确归因）：")
+            primary = result.get("primary_version", "turns")
+            print(f"  错误归因（{primary} 口径，按参考区间精确归因）：")
             for dimension, title in (
                 ("coverage", "VAD 覆盖"),
                 ("overlap", "跨说话人"),
