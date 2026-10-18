@@ -543,24 +543,34 @@ def attribute_edits(
 # ---------------------------------------------------------------------------
 # 主流程
 # ---------------------------------------------------------------------------
+def _counts_payload(counts: EditCounts) -> Dict[str, float]:
+    """把 EditCounts 展开成报告/JSON 字段。"""
+    return {
+        "ref_len": counts.ref_len,
+        "cer": counts.cer,
+        "sub_rate": counts.sub_rate,
+        "del_rate": counts.del_rate,
+        "ins_rate": counts.ins_rate,
+        "sub": counts.sub,
+        "del": counts.dele,
+        "ins": counts.ins,
+    }
+
+
 @dataclass(frozen=True)
 class VersionMetrics:
     name: str
     hyp_len: int
     counts: EditCounts
+    no_filler: EditCounts
     legacy_cer: Optional[float] = None
 
     def to_dict(self) -> Dict:
         payload = {
             "hyp_len": self.hyp_len,
-            "ref_len": self.counts.ref_len,
-            "cer": self.counts.cer,
-            "sub_rate": self.counts.sub_rate,
-            "del_rate": self.counts.del_rate,
-            "ins_rate": self.counts.ins_rate,
-            "sub": self.counts.sub,
-            "del": self.counts.dele,
-            "ins": self.counts.ins,
+            **_counts_payload(self.counts),
+            # 去口癖口径：参考剔除 呃/嗯/额/哦 后的 CER，仅作参考
+            "no_filler": _counts_payload(self.no_filler),
         }
         if self.legacy_cer is not None:
             payload["legacy_lcs_cer"] = self.legacy_cer
@@ -646,6 +656,7 @@ def evaluate(
     empty_reference = not ref_intervals
     timed_ref = source_timed and not empty_reference
     ref = "".join(item.text for item in ref_intervals)
+    ref_no_filler = "".join(ch for ch in ref if ch not in "呃嗯额哦")
 
     utterances_all = obj.get("utterances") or []
     kept_utts = [
@@ -670,6 +681,7 @@ def evaluate(
             name=name,
             hyp_len=len(hyp),
             counts=edit_counts(ref, hyp),
+            no_filler=edit_counts(ref_no_filler, hyp),
             legacy_cer=legacy_lcs_cer(ref, hyp) if legacy else None,
         )
 
@@ -703,6 +715,7 @@ def evaluate(
     return {
         "session": session_dir.name,
         "textgrid": str(textgrid_path) if textgrid_path else None,
+        "reference_source": source,
         "skip_start_ms": skip_start_ms,
         "reference": {
             "chars": len(ref),
@@ -773,6 +786,14 @@ def _print_report(result: Dict) -> None:
         if "legacy_lcs_cer" in item:
             print(f"  {'':9s} legacy difflib/LCS CER={item['legacy_lcs_cer']:.2%}"
                   f"（仅历史对照，不得与新口径混用）")
+
+    print("  去口癖 CER（参考剔除 呃/嗯/额/哦）:")
+    for name, item in result["versions"].items():
+        filler = item.get("no_filler")
+        if not filler:
+            continue
+        print(f"  {name:9s} {filler['cer']:8.2%} {filler['sub_rate']:8.2%} "
+              f"{filler['del_rate']:8.2%} {filler['ins_rate']:8.2%}")
 
     if ref.get("empty_reference"):
         print("  （窗口内没有参考片段：请检查窗口或参考文件）")

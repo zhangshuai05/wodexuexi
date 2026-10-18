@@ -189,6 +189,22 @@ def test_evaluate_ref_txt_counts_substitution(tmp_path):
     assert item["cer"] == 0.25
 
 
+def test_no_filler_cer_ignores_fillers(tmp_path):
+    d = _session(tmp_path, [
+        {"turn_id": "turn_0001", "text": "你好世界", "start_ms": 0,
+         "end_ms": 2000, "spk_label": "speaker_1"},
+    ])
+    ref = tmp_path / "ref.txt"
+    ref.write_text(
+        "[00:00.0-00:02.0] speaker_1: 你好呃世界\n", encoding="utf-8")
+
+    result = evaluate(d, ref_txt=ref)
+
+    assert result["reference_source"] == "txt"
+    assert result["versions"]["turns"]["cer"] == 0.2
+    assert result["versions"]["turns"]["no_filler"]["cer"] == 0.0
+
+
 def test_window_requires_timestamps(tmp_path):
     d = _session(tmp_path, [
         {"turn_id": "turn_0001", "text": "你好", "start_ms": 0,
