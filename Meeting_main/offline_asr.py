@@ -28,7 +28,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
-from turns import join_texts
+from turns import clean_cjk_spaces, join_texts
 
 MAX_SEGMENT_MS = 15000   # 用户要求 4s~15s；旧值是 8000（上游 v11）
 MIN_GROUP_MS = 4000      # 短句拼段的目标下限；做不到也不强拼
@@ -38,6 +38,7 @@ SHORT_GROUP_BRIDGE_GAP_MS = 1500  # 当前段不足 4s 时，允许再放宽一�
 PAD_MS = 80              # 两侧各留 80ms，避免切掉字头
 MIN_CLIP_MS = 200
 LAST_CHUNK_MERGE_MS = 500  # 长段切分后，尾块小于此值则并入前块
+_TRAILING_PUNCT = "，。！？、；："
 
 AGC_MIN_RMS = 0.002
 AGC_MAX_RMS = 0.04
@@ -70,6 +71,24 @@ def _split_ranges(start_ms: int, end_ms: int, max_ms: int) -> List[tuple]:
 
 def _utt_duration(utt: Dict) -> int:
     return max(0, int(utt["end_ms"]) - int(utt["start_ms"]))
+
+
+def _utt_weight(utt: Dict) -> int:
+    """按原句有效字数分配拼接后的识别文本，避免单纯按时长切断词语。"""
+    reference = clean_cjk_spaces(utt.get("polished_text") or utt.get("raw_text") or "")
+    char_count = len(reference.rstrip(_TRAILING_PUNCT + ",.!? "))
+    return char_count * 200 if char_count else max(1, _utt_duration(utt))
+
+
+def _restore_trailing_punct(piece: str, utt: Dict) -> str:
+    """恢复流式原句末尾有、离线识别结果缺失的中文句末标点。"""
+    piece = clean_cjk_spaces(piece)
+    if not piece or piece[-1] in _TRAILING_PUNCT + ",.!?":
+        return piece
+    reference = clean_cjk_spaces(utt.get("polished_text") or utt.get("raw_text") or "")
+    if reference and reference[-1] in _TRAILING_PUNCT:
+        return piece + reference[-1]
+    return piece
 
 
 def _agc(clip: np.ndarray, stats: Optional[Dict] = None) -> np.ndarray:
@@ -193,7 +212,8 @@ def _decode_single(
         stats["segments"] = stats.get("segments", 0) + 1
         if text:
             parts.append(text)
-    return join_texts(parts) if parts else ""
+    joined = join_texts(parts, insert_comma=False) if parts else ""
+    return _restore_trailing_punct(joined, utt)
 
 
 def _decode_group(
@@ -206,7 +226,7 @@ def _decode_group(
     use_agc: bool,
     stats: Dict,
 ) -> Dict[str, Dict]:
-    """解码一个组，返回 {utt_id: {text,start_ms,end_ms}}。"""
+    """解码一个组，返回 {utt_id: {text,start_ms,end_ms,grouped_cont}}。"""
     import soundfile as sf
 
     if len(group) == 1:
@@ -219,6 +239,7 @@ def _decode_group(
             "text": text,
             "start_ms": int(utt["start_ms"]),
             "end_ms": int(utt["end_ms"]),
+            "grouped_cont": False,
         }}
 
     members: List[tuple] = []
@@ -241,22 +262,25 @@ def _decode_group(
     parts: List[str] = []
     for chunk in chunks:
         sf.write(tmp_path, chunk, sr, subtype="PCM_16")
-        text = (caller(tmp_path) or "").strip()
+        text = clean_cjk_spaces(caller(tmp_path) or "")
         stats["segments"] = stats.get("segments", 0) + 1
         if text:
             parts.append(text)
-    text = join_texts(parts) if parts else ""
+    text = join_texts(parts, insert_comma=False) if parts else ""
     if not text:
         return {}
 
-    weights = [max(1, _utt_duration(utt)) for utt, _ in members]
+    weights = [_utt_weight(utt) for utt, _ in members]
     pieces = _split_text(text, weights)
     out: Dict[str, Dict] = {}
-    for (utt, _), piece in zip(members, pieces):
+    for index, ((utt, _), piece) in enumerate(zip(members, pieces)):
+        if index == len(members) - 1:
+            piece = _restore_trailing_punct(piece, utt)
         out[utt["utt_id"]] = {
             "text": piece,
             "start_ms": int(utt["start_ms"]),
             "end_ms": int(utt["end_ms"]),
+            "grouped_cont": index > 0,
         }
     return out
 
@@ -274,7 +298,7 @@ def transcribe_utterances(
     should_abort: Optional[Callable[[], bool]] = None,
     on_stats: Optional[Callable[[Dict], None]] = None,
 ) -> Dict[str, Dict]:
-    """返回 {utt_id: {"text", "start_ms", "end_ms"}}；失败/空段不出现。
+    """返回 {utt_id: {"text", "start_ms", "end_ms", "grouped_cont"}}；失败/空段不出现。
 
     asr_call 注入时忽略 hotwords（注入函数自行决定行为）。
     """

@@ -6,16 +6,22 @@
 """
 from __future__ import annotations
 
+import re
 import threading
 from typing import Dict, List, Optional
 
 STREAM_TURN_GAP_MS = 5000    # 流式显示：只有长停顿才换段，避免说话人未知时切得太碎
 FINAL_TURN_SPLIT_MS = 8000   # 最终合并：同一说话人也要在长静音处断开
 MIN_SUB_SEGMENT_MS = 100     # sub_turns 拆分后短于此的碎片并入相邻段
+PAUSE_COMMA_GAP_MS = 450     # 有明显停顿时才在连续中文句段间补逗号
 
 # 中文标点与汉字一样不插空格；其余字符（英文、数字等）之间补一个空格
-_CJK_PUNCT = "，。！？、；："
-_END_PUNCT = "，。！？、；：,.!?…“”‘’（）【】"
+_CJK_PUNCT = "，。！？、；：“”‘’（）《》【】…"
+_END_PUNCT = "，。！？、；：,.!?…'\" ()【】”’》"
+_CJK_RANGE = r"[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]"
+_RE_CJK_SPACE_BOTH = re.compile(f"({_CJK_RANGE})\\s+({_CJK_RANGE})")
+_RE_CJK_SPACE_LEFT = re.compile(f"({_CJK_RANGE})\\s+([,.:;!?%])")
+_RE_MULTI_SPACE = re.compile(r"\s{2,}")
 
 
 def _is_cjk(ch: str) -> bool:
@@ -23,7 +29,21 @@ def _is_cjk(ch: str) -> bool:
     return "一" <= ch <= "鿿" or ch in _CJK_PUNCT
 
 
-def join_texts(parts: List[str]) -> str:
+def clean_cjk_spaces(text: Optional[str]) -> str:
+    """删除 SEACO 在汉字和中文标点间插入的分词空格，保留英文词间空格。"""
+    if not text:
+        return ""
+    value = str(text).strip()
+    if not value:
+        return ""
+    # 两轮即可合并连续分词空格，同时保留英文/数字单词间的空格。
+    value = _RE_CJK_SPACE_BOTH.sub(r"\1\2", value)
+    value = _RE_CJK_SPACE_BOTH.sub(r"\1\2", value)
+    value = _RE_CJK_SPACE_LEFT.sub(r"\1\2", value)
+    return _RE_MULTI_SPACE.sub(" ", value).strip()
+
+
+def join_texts(parts: List[str], *, insert_comma: bool = True) -> str:
     """拼接多个文本片段。
 
     边界已有标点则直接相连；否则中文侧补逗号（长 turn 不连成一整串），
@@ -31,12 +51,43 @@ def join_texts(parts: List[str]) -> str:
     """
     joined = ""
     for part in parts:
-        text = (part or "").strip()
+        text = clean_cjk_spaces(part)
         if not text:
             continue
         if joined and joined[-1] not in _END_PUNCT and text[0] not in _END_PUNCT:
-            joined += "，" if (_is_cjk(joined[-1]) or _is_cjk(text[0])) else " "
+            if _is_cjk(joined[-1]) or _is_cjk(text[0]):
+                if insert_comma:
+                    joined += "，"
+            else:
+                joined += " "
         joined += text
+    return joined
+
+
+def _join_turn_utterances(group: List[Dict]) -> str:
+    """按离线拼接标记和实际停顿连接 utterance，避免在被切开的词中补逗号。"""
+    joined = ""
+    prev_end_ms: Optional[int] = None
+    for utt in group:
+        final_text = utt.get("final_text")
+        raw_piece = (final_text if final_text is not None else
+                     utt.get("polished_text") or utt.get("raw_text") or "")
+        text = clean_cjk_spaces(raw_piece)
+        if not text:
+            continue
+
+        start_ms = int(utt.get("start_ms") or 0)
+        end_ms = int(utt.get("end_ms") or 0)
+        gap_ms = start_ms - prev_end_ms if prev_end_ms is not None else 0
+        if joined and joined[-1] not in _END_PUNCT and text[0] not in _END_PUNCT:
+            if _is_cjk(joined[-1]) or _is_cjk(text[0]):
+                if (not utt.get("grouped_cont")
+                        and gap_ms >= PAUSE_COMMA_GAP_MS):
+                    joined += "，"
+            else:
+                joined += " "
+        joined += text
+        prev_end_ms = max(prev_end_ms or 0, end_ms)
     return joined
 
 
@@ -195,14 +246,6 @@ def build_turns(
     for utt in utterances:
         start_ms = int(utt["start_ms"])
         end_ms = int(utt["end_ms"])
-        # 最终稿优先用离线二遍文本；直播稿/raw 始终保留在 utterances 里可回溯。
-        # final_text 为 "" 表示“该句已被离线二遍覆盖但长段切分后本句为空”，
-        # 不能再回退到 raw（否则整段文本会在 turns 里重复一次）；只有缺失/None 才回退。
-        final_text = utt.get("final_text")
-        if final_text is not None:
-            text = final_text
-        else:
-            text = utt.get("polished_text") or utt.get("raw_text") or ""
         spk_label = utt.get("spk_label")
 
         if drafts:
@@ -210,7 +253,6 @@ def build_turns(
             same_spk = (not has_labels) or (spk_label == draft["spk_label"])
             if same_spk and start_ms - draft["end_ms"] < gap_ms:
                 draft["end_ms"] = max(draft["end_ms"], end_ms)
-                draft["parts"].append(text)
                 draft["utterance_ids"].append(utt["utt_id"])
                 draft["group"].append(utt)
                 continue
@@ -220,7 +262,6 @@ def build_turns(
             "spk_label": spk_label,
             "start_ms": start_ms,
             "end_ms": end_ms,
-            "parts": [text],
             "utterance_ids": [utt["utt_id"]],
             "group": [utt],
         })
@@ -234,7 +275,7 @@ def build_turns(
             "spk_label": draft["spk_label"],
             "start_ms": draft["start_ms"],
             "end_ms": draft["end_ms"],
-            "text": join_texts(draft["parts"]),
+            "text": _join_turn_utterances(group),
             "utterance_ids": draft["utterance_ids"],
             "corrected": any(bool(u.get("corrected")) for u in group),
             "bypassed": bool(group) and all(bool(u.get("bypassed")) for u in group),

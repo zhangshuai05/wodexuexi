@@ -39,9 +39,9 @@ _SUBPATHS: tuple[Path, ...] = (
 BASELINE = {
     # 2026-10-19 上游身份合并与句级迟滞更新：
     # streaming_asr_engine: VAD 同块结束+开始跨句吞字修复；1000ms 显式生效
-    # offline_diarizer: 长窗主投票、迟滞平滑与句内门控的 LF 规范化指纹。
+    # offline_diarizer: 长窗主投票、迟滞平滑、超短句邻域继承与句内门控的 LF 规范化指纹。
     "streaming_asr_engine.py": ("5152424c04f4e572", 15831),
-    "offline_diarizer.py": ("efed74f75b4f770e", 25333),
+    "offline_diarizer.py": ("fc06cdda7d27cebb", 26247),
 }
 
 

@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from turns import build_turns, split_utterance_by_sub_turns
+from turns import build_turns, clean_cjk_spaces, split_utterance_by_sub_turns
 
 SCHEMA_VERSION = 1
 
@@ -167,10 +167,16 @@ class SessionStore:
                 speaker = (diarization or {}).get(uid, {})
                 if not isinstance(speaker, dict):
                     speaker = {}
+                ft_entry = final_text.get(uid) or {}
+                raw_ft = ft_entry.get("text") if isinstance(ft_entry, dict) else None
                 parent = {
                     **utt,
-                    "polished_text": polish.get("polished_text", utt.get("raw_text", "")),
-                    "final_text": (final_text.get(uid) or {}).get("text"),
+                    "raw_text": clean_cjk_spaces(utt.get("raw_text", "")),
+                    "polished_text": clean_cjk_spaces(
+                        polish.get("polished_text", utt.get("raw_text", ""))
+                    ),
+                    "final_text": clean_cjk_spaces(raw_ft) if raw_ft is not None else None,
+                    "grouped_cont": bool(ft_entry.get("grouped_cont", False)) if isinstance(ft_entry, dict) else False,
                     "corrected": bool(polish.get("corrected", False)),
                     "bypassed": bool(polish.get("bypassed", False)),
                     "error": polish.get("error"),
@@ -184,7 +190,8 @@ class SessionStore:
                         parent, speaker.get("sub_turns")):
                     sub_final = final_text.get(part["utt_id"])
                     if isinstance(sub_final, dict) and sub_final.get("text") is not None:
-                        part["final_text"] = sub_final["text"]
+                        part["final_text"] = clean_cjk_spaces(sub_final["text"])
+                        part["grouped_cont"] = bool(sub_final.get("grouped_cont", False))
                     merged.append(part)
 
             turns = build_turns(merged)
@@ -197,7 +204,7 @@ class SessionStore:
                 if (entry.get("start_ms") != turn["start_ms"]
                         or entry.get("end_ms") != turn["end_ms"]):
                     continue
-                polished_text = entry.get("text")
+                polished_text = clean_cjk_spaces(entry.get("text"))
                 if isinstance(polished_text, str) and polished_text:
                     turn["text"] = polished_text
 

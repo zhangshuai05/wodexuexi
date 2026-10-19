@@ -159,18 +159,19 @@
       line-height: 1.85;
       white-space: normal;
     }
-    .draft-italic { color: #7b8881; font-style: italic; opacity: 0.82; }
-    .confirmed-normal { color: #25322c; font-style: normal; font-weight: 450; }
-    .utt-text span { transition: color 300ms ease, opacity 300ms ease; }
+    .draft-italic { color: #6e7b74; font-style: italic; font-weight: 400; opacity: 0.86; }
+    .confirmed-normal { color: #202a26; font-style: normal; font-weight: 400; opacity: 1; }
+    .utt-text span { transition: color 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms cubic-bezier(0.22, 1, 0.36, 1); }
     .utt-text.is-typing::after {
       display: inline-block;
-      width: 1px;
+      width: 1.5px;
       height: 15px;
       margin-left: 4px;
+      border-radius: 1px;
       background: var(--accent);
       content: "";
       vertical-align: -2px;
-      animation: blink 1.1s steps(2, start) infinite;
+      animation: soft-blink 1.25s ease-in-out infinite;
     }
     .transcript-footer { min-height: 40px; padding: 12px 0; border-top: 1px solid #edf0ed; color: var(--muted); font-size: 10px; }
     .backfill { padding: 15px 0 17px; border-top: 1px solid var(--line); }
@@ -185,7 +186,7 @@
     .notice.is-error { background: #fbefee; color: var(--error); }
 
     @keyframes arrive { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes blink { to { visibility: hidden; } }
+    @keyframes soft-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.28; } }
     @media (max-width: 620px) {
       .shell { width: min(100% - 28px, 1080px); padding-top: 20px; }
       .page-header { align-items: flex-start; flex-direction: column; gap: 11px; padding-bottom: 17px; }
@@ -333,7 +334,7 @@
         article.append(side, main);
         transcript.appendChild(article);
 
-        var row = { speakerSlot: speakerSlot, time: time, state: state, text: text, spans: {} };
+        var row = { speakerSlot: speakerSlot, time: time, state: state, text: text, spans: {}, typingTimer: null };
         rows.set(event.utt_id, row);
         document.getElementById("utterance-count").textContent = String(rows.size);
         return row;
@@ -354,7 +355,29 @@
         var span = sentenceSpan(row, key);
         if (span.className !== style) span.className = style;
         var value = text || "";
+        if (style === "confirmed-normal" && value && span.previousElementSibling) {
+          var previousText = (span.previousElementSibling.textContent || "").trim();
+          if (previousText && !/[，。！？、；：,.!?…]$/.test(previousText)) {
+            span.previousElementSibling.textContent = previousText + "，";
+          }
+        }
         if (span.textContent !== value) span.textContent = value;
+      }
+      function markTyping(row, active) {
+        if (row.typingTimer) {
+          clearTimeout(row.typingTimer);
+          row.typingTimer = null;
+        }
+        if (active) {
+          if (!row.text.classList.contains("is-typing")) {
+            row.text.classList.add("is-typing");
+          }
+        } else {
+          row.typingTimer = setTimeout(function () {
+            row.text.classList.remove("is-typing");
+            row.typingTimer = null;
+          }, 420);
+        }
       }
       function applyMapping(mapping) {
         if (!mapping) return;
@@ -384,7 +407,7 @@
           row.state.textContent = "正在识别";
           setSentence(row, event.source_utt_id || event.utt_id,
                       event.text || "", "draft-italic");
-          row.text.classList.add("is-typing");
+          markTyping(row, true);
           document.getElementById("transcript-hint").textContent = "正在接收语音，字幕会随识别结果展开";
         } else if (event.t === "asr_final") {
           row = getRow(event);
@@ -396,7 +419,7 @@
           // 句子已结束：同一个 span 从斜体切到正体，文字不移动
           setSentence(row, event.source_utt_id || event.utt_id,
                       event.raw_text || "", "confirmed-normal");
-          row.text.classList.remove("is-typing");
+          markTyping(row, false);
           document.getElementById("transcript-hint").textContent = "句尾已确认，正在进行异步校正";
         } else if (event.t === "llm_confirmed") {
           row = getRow(event);
@@ -405,6 +428,7 @@
           row.state.textContent = event.corrected ? "已校正" : (event.bypassed ? "短句略过" : "原文保留");
           setSentence(row, event.source_utt_id || event.utt_id,
                       event.polished_text || event.raw_text || "", "confirmed-normal");
+          markTyping(row, false);
           if (currentUttId === event.utt_id) {
             currentUttId = null;
           }
@@ -442,6 +466,9 @@
       }
 
       function resetSession() {
+        rows.forEach(function (row) {
+          if (row.typingTimer) clearTimeout(row.typingTimer);
+        });
         rows.clear();
         currentUttId = null;
         transcript.replaceChildren();

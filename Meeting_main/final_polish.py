@@ -11,13 +11,14 @@ from __future__ import annotations
 from typing import Callable, Dict, List, Optional
 
 from stream_llm_polish import _core, _default_call
+from turns import clean_cjk_spaces
 
 MAX_GROWTH = 1.35   # 2026-10-18 由 1.2 放宽：一段最多长 35%
 MAX_SHRINK = 0.65   # 2026-10-18 由 0.85 放宽：最多短 35%
 
 PROMPT = """你是会议转写终稿校对器。下面是同一位说话人的连续发言（已按说话人分段）。
 只做三件事：修正同音/误识别字、补标点、补全明显漏掉的字。
-禁止：改写句式、增删事实、改数字/人名/专有名词、把口语改成书面语。
+禁止：改写句式、增删事实、改数字/人名/专有名词、把口语改成书面语、在汉字之间加空格。
 不确定就保持原样。
 输出严格 JSON，不要解释，不要 markdown 代码块：
 {{"polished": "校对后的整段"}}
@@ -43,16 +44,17 @@ STRICT_PROMPT = """你是会议转写终稿校对器。只允许做一件事：�
 
 def accept_final(raw: str, candidate: str, *, strict: bool = False) -> bool:
     """会后档守卫：常规档卡 1.35/0.65；严格档要求非标点字数完全一致。"""
-    text = candidate.strip()
+    text = clean_cjk_spaces(candidate)
+    raw_clean = clean_cjk_spaces(raw)
     if not text:
         return False
-    if text == raw.strip():
+    if text == raw_clean:
         return True
     if strict:
-        return len(_core(text)) == len(_core(raw))
-    if len(text) > len(raw) * MAX_GROWTH:
+        return len(_core(text)) == len(_core(raw_clean))
+    if len(text) > max(1, len(raw_clean)) * MAX_GROWTH:
         return False
-    if len(text) < len(raw) * MAX_SHRINK:
+    if len(text) < len(raw_clean) * MAX_SHRINK:
         return False
     return True
 
@@ -82,11 +84,11 @@ def polish_turns(
         # 重置/取消后立即停：已接受的部分仍然保留
         if should_abort is not None and should_abort():
             break
-        raw = (turn.get("text") or "").strip()
+        raw = clean_cjk_spaces(turn.get("text") or "")
         if raw:
             context = ""
             if index > 1:
-                context = (turns[index - 2].get("text") or "")[-300:]
+                context = clean_cjk_spaces(turns[index - 2].get("text") or "")[-300:]
             try:
                 reply = caller(prompt_template.format(context=context or "（无）", raw=raw))
                 from llm_correct import extract_json
@@ -95,7 +97,7 @@ def polish_turns(
                 if isinstance(candidate, str) and accept_final(
                         raw, candidate, strict=strict):
                     out[turn["turn_id"]] = {
-                        "text": candidate.strip(),
+                        "text": clean_cjk_spaces(candidate),
                         "start_ms": int(turn.get("start_ms") or 0),
                         "end_ms": int(turn.get("end_ms") or 0),
                     }

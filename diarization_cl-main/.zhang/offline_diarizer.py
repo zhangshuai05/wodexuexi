@@ -131,6 +131,25 @@ def _smooth_turn_speakers(
             return float("inf")
         return float(row[label_to_col[current]] - row[label_to_col[target]])
 
+    # 超短碎片句的声纹方差过大，紧邻前句时继承其说话人，避免句尾报号跳变。
+    short_inherit_s = float(os.environ.get("DIAR_SHORT_INHERIT_S", "1.3"))
+    for i in range(len(out)):
+        if out[i] < 0:
+            continue
+        duration = float(turns[i]["end"]) - float(turns[i]["start"])
+        if duration >= short_inherit_s:
+            continue
+        if i > 0 and out[i - 1] >= 0:
+            gap_prev = float(turns[i]["start"]) - float(turns[i - 1]["end"])
+            if gap_prev <= 2.5:
+                out[i] = out[i - 1]
+                continue
+        if i + 1 < len(out) and out[i + 1] >= 0:
+            gap_next = float(turns[i + 1]["start"]) - float(turns[i]["end"])
+            next_duration = float(turns[i + 1]["end"]) - float(turns[i + 1]["start"])
+            if gap_next <= 2.0 and next_duration >= short_inherit_s:
+                out[i] = out[i + 1]
+
     # 一句夹心：A -> B -> A。
     for i in range(1, len(out) - 1):
         prev, current, nxt = out[i - 1], out[i], out[i + 1]
